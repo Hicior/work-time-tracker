@@ -1,0 +1,274 @@
+<%- layout('layouts/main') %>
+
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold mb-6">Zarządzanie Grupami</h1>
+
+  <div class="flex mb-6">
+    <a href="/admin" class="text-blue-500 hover:text-blue-700">
+      &laquo; Powrót do Panelu Administratora
+    </a>
+  </div>
+
+  <% if (messages && messages.success && messages.success !== 'user_assigned') {
+  %>
+  <div
+    class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+    <% if (messages.success === 'group_created') { %>
+    <span>Grupa została utworzona pomyślnie.</span>
+    <% } else if (messages.success === 'group_updated') { %>
+    <span>Nazwa grupy została zaktualizowana pomyślnie.</span>
+    <% } else if (messages.success === 'group_deleted') { %>
+    <span>Grupa została usunięta pomyślnie.</span>
+    <% /* user_assigned handled by top-right notification */ %> <% } %>
+  </div>
+  <% } %> <% if (messages && messages.error) { %>
+  <div
+    class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+    <span><%= messages.error %></span>
+  </div>
+  <% } %>
+
+  <!-- Add New Group Form -->
+  <div class="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+      <h2 class="text-xl font-semibold">Dodaj Nową Grupę</h2>
+    </div>
+    <div class="p-6">
+      <form
+        action="/admin/groups"
+        method="POST"
+        class="flex flex-wrap items-end">
+        <div class="w-full md:w-1/2 mb-4 md:mb-0 md:pr-2">
+          <label for="name" class="block text-gray-700 text-sm font-bold mb-2"
+            >Nazwa Grupy</label
+          >
+          <input
+            type="text"
+            id="name"
+            name="name"
+            required
+            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+        </div>
+        <div class="w-full md:w-1/2 md:pl-2">
+          <button
+            type="submit"
+            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+            Dodaj Grupę
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Manage Groups -->
+  <div class="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+      <h2 class="text-xl font-semibold">Zarządzaj Grupami</h2>
+    </div>
+    <div class="p-6">
+      <% if (groups && groups.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+          <thead>
+            <tr
+              class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+              <th class="py-3 px-6 text-left">ID</th>
+              <th class="py-3 px-6 text-left">Nazwa</th>
+              <th class="py-3 px-6 text-left">Data Utworzenia</th>
+              <th class="py-3 px-6 text-center">Akcje</th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-600 text-sm">
+            <% groups.forEach(group => { %>
+            <tr class="border-b border-gray-200 hover:bg-gray-50">
+              <td class="py-3 px-6 text-left"><%= group.id %></td>
+              <td class="py-3 px-6 text-left"><%= group.name %></td>
+              <td class="py-3 px-6 text-left">
+                <%= formatDateTimeForDisplay(group.created_at) %>
+              </td>
+              <td class="py-3 px-6 text-center">
+                <div class="flex justify-center space-x-2">
+                  <button
+                    onclick="openEditModal('<%= group.id %>', '<%= group.name %>')"
+                    class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded text-xs">
+                    Edytuj
+                  </button>
+                  <form
+                    action="/admin/groups/<%= group.id %>/delete"
+                    method="POST"
+                    class="inline-block"
+                    onsubmit="return confirm('Czy na pewno chcesz usunąć tę grupę?');">
+                    <button
+                      type="submit"
+                      class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-xs">
+                      Usuń
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } else { %>
+      <div class="py-8 text-center text-gray-500">Brak grup w systemie</div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Assign User to Group -->
+  <div
+    id="assign-user-section"
+    class="bg-white shadow-md rounded-lg overflow-hidden">
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+      <h2 class="text-xl font-semibold">Przypisz Użytkownika do Grupy</h2>
+    </div>
+    <div class="p-6">
+      <form action="/admin/groups/assign-user" method="POST">
+        <div class="mb-4">
+          <label for="userId" class="block text-gray-700 text-sm font-bold mb-2"
+            >Użytkownik</label
+          >
+          <select
+            id="userId"
+            name="userId"
+            required
+            class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            <option value="">Wybierz użytkownika</option>
+            <% users.forEach(user => { %>
+            <option value="<%= user.id %>">
+              <%= user.email %> <% if (user.group_id) { %> (Obecna grupa: <%=
+              groups.find(g => g.id === user.group_id)?.name || 'Nieznana' %>)
+              <% } else { %> (Brak grupy) <% } %>
+            </option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label
+            for="groupId"
+            class="block text-gray-700 text-sm font-bold mb-2"
+            >Grupa</label
+          >
+          <select
+            id="groupId"
+            name="groupId"
+            class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            <option value="">Brak grupy (usuń przypisanie)</option>
+            <% groups.forEach(group => { %>
+            <option value="<%= group.id %>"><%= group.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <button
+          type="submit"
+          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+          Przypisz do Grupy
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Group Modal -->
+<div
+  id="editGroupModal"
+  class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden flex items-center justify-center">
+  <div
+    class="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all max-w-lg w-full">
+    <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+      <h3 class="text-lg font-semibold text-gray-900">Edytuj Grupę</h3>
+    </div>
+    <form id="editGroupForm" action="" method="POST">
+      <div class="px-4 py-5">
+        <label for="editName" class="block text-gray-700 text-sm font-bold mb-2"
+          >Nazwa Grupy</label
+        >
+        <input
+          type="text"
+          id="editName"
+          name="name"
+          required
+          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+      </div>
+      <div class="bg-gray-50 px-4 py-3 flex justify-end">
+        <button
+          type="button"
+          onclick="closeEditModal()"
+          class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2">
+          Anuluj
+        </button>
+        <button
+          type="submit"
+          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+          Zapisz
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Modal functions
+  function openEditModal(id, name) {
+    document.getElementById("editGroupForm").action = `/admin/groups/${id}`;
+    document.getElementById("editName").value = name;
+    document.getElementById("editGroupModal").classList.remove("hidden");
+  }
+
+  function closeEditModal() {
+    document.getElementById("editGroupModal").classList.add("hidden");
+  }
+
+  // Notification and scroll handling
+  document.addEventListener("DOMContentLoaded", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const message = urlParams.get("message");
+    const error = urlParams.get("error");
+
+    if (message === "user_assigned") {
+      // Show top-right notification
+      if (typeof window.showNotification === "function") {
+        window.showNotification(
+          "Użytkownik został przypisany do grupy pomyślnie.",
+          "success"
+        );
+      }
+
+      // Scroll to the assign user section
+      const assignSection = document.getElementById("assign-user-section");
+      if (assignSection) {
+        // Use setTimeout to ensure rendering is complete before scrolling
+        setTimeout(() => {
+          assignSection.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+      }
+
+      // Remove the message from URL without reloading
+      if (window.history.replaceState) {
+        const cleanURL = window.location.pathname + window.location.hash; // Keep hash if exists
+        window.history.replaceState({ path: cleanURL }, "", cleanURL);
+      }
+    }
+
+    // Show error notification if exists (could be from group deletion attempt)
+    if (error) {
+      if (typeof window.showNotification === "function") {
+        let errorMessage = "Wystąpił błąd.";
+        if (error === "Cannot delete group with assigned users") {
+          errorMessage =
+            "Nie można usunąć grupy, która ma przypisanych użytkowników.";
+        }
+        window.showNotification(errorMessage, "error");
+      }
+      // Remove the error from URL without reloading
+      if (window.history.replaceState) {
+        const cleanURL = window.location.pathname + window.location.hash; // Keep hash if exists
+        window.history.replaceState({ path: cleanURL }, "", cleanURL);
+      }
+    }
+  });
+</script>
+
+<%- include('../partials/notification-script') %>

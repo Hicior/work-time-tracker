@@ -1,0 +1,131 @@
+<%- layout('layouts/main') %>
+
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold text-gray-900 mb-6">Panel Administratora</h1>
+
+  <% if (messages && messages.success) { %>
+  <div
+    class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+    <% if (messages.success === 'role_updated') { %>
+    <span>Rola użytkownika została zaktualizowana pomyślnie.</span>
+    <% } %>
+  </div>
+  <% } %> <% if (messages && messages.error) { %>
+  <div
+    class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+    <span><%= messages.error %></span>
+  </div>
+  <% } %>
+
+  <!-- Admin Navigation -->
+  <div class="mb-8 flex flex-wrap gap-4">
+    <a
+      href="/admin/groups"
+      class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+      Zarządzaj Grupami
+    </a>
+    <a
+      href="/admin/public-holidays"
+      class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+      Zarządzaj Dniami Ustawowo Wolnymi
+    </a>
+  </div>
+
+  <div class="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-900">
+        Zarządzanie Użytkownikami
+      </h2>
+    </div>
+
+    <div class="p-6">
+      <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+          <thead>
+            <tr
+              class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+              <th class="py-3 px-6 text-left">Email</th>
+              <th class="py-3 px-6 text-left">Rola</th>
+              <th class="py-3 px-6 text-left">Grupa</th>
+              <th class="py-3 px-6 text-left">Ostatnie logowanie</th>
+              <th class="py-3 px-6 text-center">Akcje</th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-600 text-sm">
+            <% if (users && users.length > 0) { %> <% users.forEach(user => { %>
+            <tr class="border-b border-gray-200 hover:bg-gray-50">
+              <td class="py-3 px-6 text-left"><%= user.email %></td>
+              <td class="py-3 px-6 text-left">
+                <span
+                  class="<%= user.role === 'admin' ? 'bg-blue-200 text-blue-800' : 'bg-green-200 text-green-800' %> py-1 px-3 rounded-full text-xs">
+                  <%= user.role === 'admin' ? 'Administrator' : 'Użytkownik' %>
+                </span>
+              </td>
+              <td class="py-3 px-6 text-left">
+                <% if (user.group_id && groups) { %> <% const group =
+                groups.find(g => g.id === user.group_id) %> <% if (group) { %>
+                <span
+                  class="bg-gray-200 text-gray-800 py-1 px-3 rounded-full text-xs">
+                  <%= group.name %>
+                </span>
+                <% } else { %> - <% } %> <% } else { %> - <% } %>
+              </td>
+              <td class="py-3 px-6 text-left">
+                <%= new Date(user.last_login).toLocaleString('pl-PL') %>
+              </td>
+              <td class="py-3 px-6 text-center">
+                <div class="flex justify-center">
+                  <form
+                    action="/admin/users/<%= user.id %>/role"
+                    method="POST"
+                    class="inline-block">
+                    <input
+                      type="hidden"
+                      name="role"
+                      value="<%= user.role === 'admin' ? 'user' : 'admin' %>" />
+                    <button
+                      type="submit"
+                      class="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-yellow-500 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
+                      <%= user.role === 'admin' ? 'Zmień na Użytkownika' :
+                      'Zmień na Administratora' %>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <% }) %> <% } else { %>
+            <tr>
+              <td colspan="5" class="py-8 text-center text-gray-500">
+                Brak użytkowników w systemie
+              </td>
+            </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white shadow-md rounded-lg overflow-hidden">
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-900">Informacje o Rolach</h2>
+    </div>
+
+    <div class="p-6">
+      <div class="mb-4">
+        <h3 class="font-semibold text-lg mb-2 text-gray-900">Administrator</h3>
+        <p class="text-gray-600">
+          Administratorzy mają dostęp do wszystkich funkcji systemu, w tym
+          zarządzania użytkownikami.
+        </p>
+      </div>
+
+      <div>
+        <h3 class="font-semibold text-lg mb-2 text-gray-900">Użytkownik</h3>
+        <p class="text-gray-600">
+          Użytkownicy mogą zarządzać tylko swoimi godzinami pracy i urlopami.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,357 @@
+<%- layout('layouts/main') %>
+
+<div class="bg-white rounded-lg shadow p-6">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-gray-900">Ewidencja czasu pracy</h2>
+    <div>
+      <span class="text-sm text-gray-500">Dzisiaj:</span>
+      <span class="ml-1 font-medium"><%= todayDate %></span>
+    </div>
+  </div>
+
+  <!-- Monthly statistics -->
+  <div class="mb-8 bg-gray-50 rounded-lg p-4">
+    <h3 class="text-lg font-medium text-gray-900 mb-4">
+      Podsumowanie miesiąca (<%= monthStats.requiredMonthlyHours %>h)
+    </h3>
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+        <div class="text-sm text-gray-500 mb-1">Przepracowane godziny</div>
+        <div class="text-xl font-semibold text-gray-900">
+          <%= monthStats.totalWorkHours %>h
+        </div>
+      </div>
+      <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+        <div class="text-sm text-gray-500 mb-1">Dni urlopowe</div>
+        <div class="text-xl font-semibold text-gray-900">
+          <%= monthStats.holidayCount %> dni (<%= monthStats.totalHolidayHours
+          %>h)
+        </div>
+      </div>
+      <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+        <div class="text-sm text-gray-500 mb-1">Dni ustawowo wolne</div>
+        <div class="text-xl font-semibold text-gray-900">
+          <%= monthStats.publicHolidayCount %> dni (<%=
+          monthStats.publicHolidaysCount * 8 %>h)
+        </div>
+      </div>
+      <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+        <div class="text-sm text-gray-500 mb-1">Razem</div>
+        <div class="text-xl font-semibold text-gray-900">
+          <%= monthStats.totalCombinedHours %>h
+        </div>
+      </div>
+    </div>
+    <div class="mt-4 bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+      <div class="flex justify-between items-center">
+        <div>
+          <div class="text-sm text-gray-500 mb-1">
+            Pozostało do przepracowania w tym miesiącu
+          </div>
+          <div class="text-xl font-semibold text-gray-900">
+            <%= monthStats.remainingHours %>h
+          </div>
+        </div>
+        <div class="w-1/2 bg-gray-200 rounded-full h-4">
+          <% /* Calculate progress percentage */ const progressPercent =
+          monthStats.requiredMonthlyHours > 0 ? Math.min(100,
+          (monthStats.totalCombinedHours / monthStats.requiredMonthlyHours) *
+          100) : 0; const progressStyle = `width: ${progressPercent}%`; %>
+          <div
+            class="bg-blue-500 h-4 rounded-full"
+            style="<%= progressStyle %>"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-4 text-right">
+      <a
+        href="/holidays"
+        class="text-blue-600 hover:text-blue-900 text-sm font-medium">
+        Zarządzaj urlopami →
+      </a>
+    </div>
+  </div>
+
+  <!-- Two-column layout for entry form and history -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:divide-x md:divide-gray-300">
+    <!-- Left column: Add new entry -->
+    <div class="md:pr-5">
+      <h3 class="text-lg font-medium text-gray-900 mb-3">Dodaj nowy wpis</h3>
+      <form
+        action="/work-hours"
+        method="POST"
+        class="p-3">
+        <div class="mb-4">
+          <label
+            for="work_date"
+            class="block text-sm font-medium text-gray-700 mb-1"
+            >Data</label
+          >
+          <select
+            id="work_date"
+            name="work_date"
+            class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2"
+            required>
+            <option value="<%= todayDate %>">Dzisiaj (<%= todayDate %>)</option>
+            <option value="<%= yesterdayDate %>">
+              Wczoraj (<%= yesterdayDate %>)
+            </option>
+            <option value="<%= dayBeforeYesterdayDate %>">
+              Przedwczoraj (<%= dayBeforeYesterdayDate %>)
+            </option>
+          </select>
+        </div>
+
+        <div class="mb-6">
+          <div class="flex justify-between items-center mb-4">
+            <label
+              for="hours_input"
+              class="block text-sm font-medium text-gray-700"
+              >Liczba godzin:
+              <span id="hours_value" class="font-semibold">8</span></label
+            >
+            <div class="flex space-x-2">
+              <button
+                type="button"
+                onclick="setHours(8)"
+                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
+                8h
+              </button>
+              <button
+                type="button"
+                onclick="setHours(9)"
+                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
+                9h
+              </button>
+              <button
+                type="button"
+                onclick="setHours(10)"
+                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
+                10h
+              </button>
+              <button
+                type="button"
+                onclick="setHours(11)"
+                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
+                11h
+              </button>
+              <button
+                type="button"
+                onclick="setHours(12)"
+                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
+                12h
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <div class="flex items-center justify-center">
+              <button
+                type="button"
+                onclick="decrementHours()"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm py-2 px-4 rounded-l focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 hours-control-btn">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor">
+                  <path
+                    fill-rule="evenodd"
+                    d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                    clip-rule="evenodd" />
+                </svg>
+              </button>
+              <input
+                type="number"
+                id="hours_input"
+                min="0.5"
+                max="24"
+                step="0.5"
+                value="8"
+                class="focus:ring-blue-500 focus:border-blue-500 text-center w-24 shadow-sm text-lg font-medium border-gray-300 p-2 hours-input"
+                oninput="updateHoursValue(this.value)" />
+              <button
+                type="button"
+                onclick="incrementHours()"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm py-2 px-4 rounded-r focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 hours-control-btn">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor">
+                  <path
+                    fill-rule="evenodd"
+                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                    clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Hidden input to actually submit the value -->
+          <input
+            type="hidden"
+            id="total_hours"
+            name="total_hours_str"
+            value="8" />
+        </div>
+
+        <div class="mt-4">
+          <button
+            type="submit"
+            class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Dodaj wpis
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Right column: Entry history -->
+    <div class="md:pl-5">
+      <h3 class="text-lg font-medium text-gray-900 mb-3">
+        Twoje wpisy (Ostatnie 3 dni)
+      </h3>
+
+      <% if (workHours && workHours.length > 0) { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th
+                scope="col"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Data
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Liczba godzin
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Akcje
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% workHours.forEach(entry => { %>
+            <tr id="entry-row-<%= entry.id %>">
+              <td
+                class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <%= entry.weekday_name %> (<%= entry.work_date %>)
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <%= entry.total_hours %>h
+              </td>
+              <td
+                class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button
+                  onclick="toggleEditForm('<%= entry.id %>')"
+                  class="text-blue-600 hover:text-blue-800 mr-2">
+                  Edytuj
+                </button>
+                <form
+                  action="/work-hours/<%= entry.id %>/delete"
+                  method="POST"
+                  class="inline"
+                  onsubmit="return confirm('Czy na pewno chcesz usunąć ten wpis?');">
+                  <button type="submit" class="text-red-600 hover:text-red-800">
+                    Usuń
+                  </button>
+                </form>
+              </td>
+            </tr>
+            <tr id="edit-form-row-<%= entry.id %>" class="hidden bg-gray-50">
+              <td colspan="3" class="px-6 py-4">
+                <form
+                  action="/work-hours/<%= entry.id %>"
+                  method="POST"
+                  class="grid grid-cols-3 gap-4 items-end">
+                  <div>
+                    <label
+                      for="edit_total_hours_<%= entry.id %>"
+                      class="block text-sm font-medium text-gray-700"
+                      >Liczba godzin</label
+                    >
+                    <input
+                      type="number"
+                      step="0.01"
+                      id="edit_total_hours_<%= entry.id %>"
+                      name="total_hours_str"
+                      value="<%= entry.total_hours %>"
+                      min="0.01"
+                      class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2.5"
+                      required />
+                  </div>
+                  <div class="flex space-x-2">
+                    <button
+                      type="submit"
+                      class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-500 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                      Zapisz
+                    </button>
+                    <button
+                      type="button"
+                      onclick="toggleEditForm('<%= entry.id %>')"
+                      class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                      Anuluj
+                    </button>
+                  </div>
+                </form>
+              </td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <% } else { %>
+      <div class="p-3">
+        <p class="text-gray-700">Brak wpisów dla ostatnich 3 dni.</p>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Functions for hours input
+  function updateHoursValue(value) {
+    // Ensure the value is within range
+    value = Math.max(0.5, Math.min(24, parseFloat(value) || 0.5));
+
+    // Update displayed and hidden values
+    document.getElementById("hours_value").textContent = value;
+    document.getElementById("total_hours").value = value;
+    document.getElementById("hours_input").value = value;
+  }
+
+  function setHours(value) {
+    document.getElementById("hours_input").value = value;
+    updateHoursValue(value);
+  }
+
+  function incrementHours() {
+    const input = document.getElementById("hours_input");
+    const currentValue = parseFloat(input.value) || 0.5;
+    const newValue = Math.min(24, currentValue + 0.5);
+    input.value = newValue;
+    updateHoursValue(newValue);
+  }
+
+  function decrementHours() {
+    const input = document.getElementById("hours_input");
+    const currentValue = parseFloat(input.value) || 0.5;
+    const newValue = Math.max(0.5, currentValue - 0.5);
+    input.value = newValue;
+    updateHoursValue(newValue);
+  }
+
+  function toggleEditForm(id) {
+    const row = document.getElementById(`entry-row-${id}`);
+    const form = document.getElementById(`edit-form-row-${id}`);
+    row.classList.toggle("hidden");
+    form.classList.toggle("hidden");
+  }
+</script>
+
+</div>

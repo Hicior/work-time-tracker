@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      <%- typeof title !== 'undefined' ? title + ' - ' : '' %>Kancelaria Mentzen
+      - System Ewidencji Czasu Pracy
+    </title>
+    <link rel="stylesheet" href="/css/output.css" />
+    <script src="/js/notifications.js" defer></script>
+    <% // Set default values if not provided %> <% if (typeof currentPage ===
+    'undefined') { currentPage = ''; } %>
+  </head>
+  <body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- Flash messages container (hidden) -->
+    <div id="flash-messages" style="display: none">
+      <% if (typeof messages !== 'undefined') { %> <% if (messages.success) { %>
+      <input
+        type="hidden"
+        data-type="success"
+        value="<%= messages.success %>" />
+      <% } %> <% if (messages.error) { %>
+      <input type="hidden" data-type="error" value="<%= messages.error %>" />
+      <% } %> <% if (messages.info) { %>
+      <input type="hidden" data-type="info" value="<%= messages.info %>" />
+      <% } %> <% if (messages.warning) { %>
+      <input
+        type="hidden"
+        data-type="warning"
+        value="<%= messages.warning %>" />
+      <% } %> <% } %>
+    </div>
+
+    <script>
+      // Process flash messages from hidden inputs
+      document.addEventListener("DOMContentLoaded", function () {
+        var container = document.getElementById("flash-messages");
+        var inputs = container.querySelectorAll('input[type="hidden"]');
+
+        inputs.forEach(function (input) {
+          var message = input.value;
+          var type = input.getAttribute("data-type");
+          window.showNotification(message, type);
+        });
+      });
+    </script>
+
+    <header class="bg-white shadow">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <div class="flex">
+            <div class="flex-shrink-0 flex items-center">
+              <img
+                src="/images/logo_2000x2000px_poziom.png"
+                alt="Kancelaria Mentzen"
+                class="h-10"
+                style="image-rendering: crisp-edges" />
+            </div>
+            <nav class="ml-6 flex space-x-4">
+              <a
+                href="/"
+                class="<%- currentPage === 'home' ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' %> inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                Panel główny
+              </a>
+              <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated)
+              { %>
+              <a
+                href="/work-hours"
+                class="<%- currentPage === 'work-hours' ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' %> inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                Czas pracy
+              </a>
+              <a
+                href="/holidays"
+                class="<%- currentPage === 'holidays' ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' %> inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                Urlop
+              </a>
+              <% if (typeof dbUser !== 'undefined' && dbUser && dbUser.isAdmin
+              && dbUser.isAdmin()) { %>
+              <a
+                href="/admin"
+                class="<%- currentPage === 'admin' ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' %> inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                Panel admina
+              </a>
+              <a
+                href="/work-hours/statistics"
+                class="<%- currentPage === 'admin-statistics' ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' %> inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                Statystyki Pracowników
+              </a>
+              <a
+                href="/dashboard"
+                class="<%- currentPage === 'employees-dashboard' ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' %> inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                Dashboard czasu pracy
+              </a>
+              <% } %> <% } %>
+            </nav>
+          </div>
+          <div class="flex items-center">
+            <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+            %>
+            <a href="/profile" class="flex items-center group">
+              <% if (user && user.picture) { %>
+              <img
+                src="<%= user.picture %>"
+                alt="profile picture"
+                class="h-8 w-8 rounded-full" />
+              <% } else { %>
+              <div
+                class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <span class="font-medium text-blue-600"
+                  ><%= user && user.email ? user.email.charAt(0).toUpperCase() :
+                  'U' %></span
+                >
+              </div>
+              <% } %>
+              <span
+                class="ml-2 text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                <%= user && user.email ? user.email : 'Użytkownik' %> <% if
+                (typeof dbUser !== 'undefined' && dbUser && dbUser.isAdmin &&
+                dbUser.isAdmin()) { %>
+                <span class="text-xs text-blue-600 ml-1">(Admin)</span>
+                <% } %>
+              </span>
+            </a>
+            <% } else { %>
+            <a
+              href="/login"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              Zaloguj się
+            </a>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-grow">
+      <% if (currentPage === 'employees-dashboard') { %>
+      <div class="max-w-[1600px] mx-auto py-6 sm:px-6 lg:px-8"><%- body %></div>
+      <% } else { %>
+      <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8"><%- body %></div>
+      <% } %>
+    </main>
+  </body>
+</html>

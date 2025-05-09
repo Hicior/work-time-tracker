@@ -1,0 +1,35 @@
+<%# Use this partial in any view to show a notification %> <%# Example: %> <%#
+<button onclick="showNotification('Your action was successful!', 'success')">
+  Show Success
+</button>
+%> <%#
+<button onclick="showNotification('Something went wrong!', 'error')">
+  Show Error
+</button>
+%> <%#
+<button onclick="showNotification('This is some information.', 'info')">
+  Show Info
+</button>
+%> <%#
+<button onclick="showNotification('Be careful with this!', 'warning')">
+  Show Warning
+</button>
+%>
+
+<script>
+  function showNotification(message, type, duration) {
+    // Check if showNotification is available (script is loaded)
+    if (typeof window.showNotification === "function") {
+      window.showNotification(message, type, duration);
+    } else {
+      // Script not loaded yet, wait for it
+      window.addEventListener("DOMContentLoaded", () => {
+        if (typeof window.showNotification === "function") {
+          window.showNotification(message, type, duration);
+        } else {
+          console.error("Notification system not loaded");
+        }
+      });
+    }
+  }
+</script>

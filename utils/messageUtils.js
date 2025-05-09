@@ -1,0 +1,90 @@
+/**
+ * Message utility functions for the Work Time Tracker application.
+ * Handles application-wide notification and messaging system.
+ * Maps short message codes to their full text versions in Polish.
+ * Processes and prepares messages for display in the UI.
+ */
+
+// Message type mappings
+const messageMap = {
+  success: {
+    // Holiday-related messages
+    holiday_added: "Pomyślnie dodano urlop.",
+    holiday_deleted: "Pomyślnie usunięto urlop.",
+
+    // Work hours-related messages
+    work_added: "Pomyślnie dodano wpis czasu pracy.",
+    work_deleted: "Pomyślnie usunięto wpis czasu pracy.",
+    work_updated: "Pomyślnie zaktualizowano wpis czasu pracy.",
+
+    // Generic messages
+    added: "Pomyślnie dodano wpis.",
+    deleted: "Pomyślnie usunięto wpis.",
+    updated: "Pomyślnie zaktualizowano dane.",
+    imported: "Pomyślnie zaimportowano dane.",
+  },
+  error: {
+    // Generic errors
+    failed: "Wystąpił błąd. Spróbuj ponownie.",
+    not_found: "Nie znaleziono wpisu.",
+    unauthorized: "Brak uprawnień do wykonania tej operacji.",
+
+    // Holiday-specific errors
+    invalid_date: "Proszę wybrać prawidłową datę.",
+    work_hours_conflict:
+      "Nie można dodać urlopu dla dnia, w którym masz już wpisane godziny pracy.",
+    holiday_not_found: "Nie znaleziono urlopu.",
+
+    // Work hours-specific errors
+    holiday: "Nie można dodać wpisu w dzień urlopowy.",
+    invalid_hours: "Podaj prawidłową liczbę godzin (większą niż 0).",
+    cannot_update_old: "Możesz edytować wpisy tylko z dzisiaj lub wczoraj.",
+    cannot_delete_old: "Możesz usuwać wpisy tylko z dzisiaj lub wczoraj.",
+    work_invalid_date:
+      "Możesz dodawać wpisy tylko dla dzisiaj, wczoraj lub przedwczoraj.",
+  },
+  info: {
+    no_changes: "Nie wprowadzono żadnych zmian.",
+  },
+  warning: {
+    pending: "Operacja oczekuje na zatwierdzenie.",
+  },
+};
+
+/**
+ * Prepares messages for the notification system
+ * @param {Object} messages - Message object (e.g., req.query)
+ * @returns {Object} Processed message object with full text
+ */
+const prepareMessages = (messages) => {
+  const result = {};
+
+  if (!messages) return result;
+
+  // Process success messages
+  if (messages.success) {
+    result.success = messageMap.success[messages.success] || messages.success;
+  }
+
+  // Process error messages
+  if (messages.error) {
+    result.error = messageMap.error[messages.error] || messages.error;
+  }
+
+  // Process info messages
+  if (messages.info) {
+    result.info = messageMap.info[messages.info] || messages.info;
+  }
+
+  // Process warning messages
+  if (messages.warning) {
+    result.warning = messageMap.warning[messages.warning] || messages.warning;
+  }
+
+  return result;
+};
+
+module.exports = {
+  prepareMessages,
+  messageMap,
+};

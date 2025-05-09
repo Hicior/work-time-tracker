@@ -1,0 +1,37 @@
+{
+  "name": "work-time-tracker",
+  "version": "1.0.0",
+  "description": "App which allows company workers to track their working hours.",
+  "main": "index.js",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "tailwind": "npx @tailwindcss/cli -i ./src/input.css -o ./public/css/output.css --watch",
+    "dev:all": "concurrently \"npm run dev\" \"npm run tailwind\"",
+    "backup": "node scripts/backup-database.js",
+    "build": "npx @tailwindcss/cli -i ./src/input.css -o ./public/css/output.css",
+    "postinstall": "npm run build",
+    "migrate-to-postgres": "node scripts/migrate-to-postgres.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.4",
+    "concurrently": "^8.2.2",
+    "dotenv": "^16.5.0",
+    "ejs": "^3.1.9",
+    "ejs-mate": "^4.0.0",
+    "express": "^5.1.0",
+    "express-openid-connect": "^2.18.0",
+    "pg": "^8.11.3",
+    "pg-types": "^4.0.2",
+    "tailwindcss": "^4.1.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

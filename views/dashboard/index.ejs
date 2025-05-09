@@ -1,0 +1,254 @@
+<%- layout('layouts/main') %>
+
+<div class="px-4 py-5 sm:px-6">
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6">
+    <h2 class="text-3xl font-bold text-gray-900 mb-4 md:mb-0">
+      Dashboard czasu pracy
+    </h2>
+    
+    <!-- Month selector -->
+    <div class="bg-white p-5 rounded-lg shadow border border-gray-100">
+      <form method="get" action="/dashboard" class="flex flex-col sm:flex-row gap-4 items-center">
+        <div class="w-full sm:w-auto">
+          <label for="month" class="block text-sm font-medium text-gray-700 mb-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Miesiąc
+          </label>
+          <select id="month" name="month" class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm">
+            <% for (let i = 1; i <= 12; i++) { %>
+              <option value="<%= i %>" <%= selectedMonth === i ? 'selected' : '' %>>
+                <%= new Date(0, i-1).toLocaleString('pl-PL', {month: 'long'}) %>
+              </option>
+            <% } %>
+          </select>
+        </div>
+        <div class="w-full sm:w-auto">
+          <label for="year" class="block text-sm font-medium text-gray-700 mb-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Rok
+          </label>
+          <select id="year" name="year" class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm">
+            <% const currentYear = new Date().getFullYear(); %>
+            <% for (let year = currentYear - 2; year <= currentYear + 1; year++) { %>
+              <option value="<%= year %>" <%= selectedYear === year ? 'selected' : '' %>><%= year %></option>
+            <% } %>
+          </select>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="mb-6 bg-white p-5 rounded-lg shadow border border-gray-100">
+    <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      Legenda:
+    </h3>
+    <div class="flex flex-wrap gap-4 justify-start">
+      <div class="flex items-center p-2 rounded">
+        <div class="w-6 h-6 bg-green-100 mr-2 rounded border border-green-200"></div>
+        <span class="text-sm font-medium text-gray-700">Dzień pracujący</span>
+      </div>
+      <div class="flex items-center p-2 rounded">
+        <div class="w-6 h-6 bg-red-100 mr-2 rounded border border-red-200"></div>
+        <span class="text-sm font-medium text-gray-700">Urlop</span>
+      </div>
+      <div class="flex items-center p-2 rounded">
+        <div class="w-6 h-6 bg-purple-100 mr-2 rounded border border-purple-200"></div>
+        <span class="text-sm font-medium text-gray-700">Święto</span>
+      </div>
+      <div class="flex items-center p-2 rounded">
+        <div class="w-6 h-6 bg-gray-100 mr-2 rounded border border-gray-200"></div>
+        <span class="text-sm font-medium text-gray-700">Weekend</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Table -->
+  <div class="overflow-x-auto">
+    <div class="align-middle inline-block min-w-full">
+      <% groupedEmployees.forEach((group, groupIndex) => { %>
+        <!-- Each group in its own card -->
+        <div class="mb-0 shadow border-b border-gray-200 sm:rounded-lg">
+          <!-- Group header -->
+          <div class="bg-gray-100 border-b border-gray-300 px-6 py-3 text-left text-sm font-medium">
+            <div class="flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span class="text-base font-semibold text-gray-900"><%= group.name %></span>
+              <span class="ml-2 bg-gray-200 text-gray-700 rounded-full px-2 py-1 text-xs">
+                <%= group.employees.length %> <%= group.employees.length === 1 ? 'pracownik' : 'pracowników' %>
+              </span>
+            </div>
+          </div>
+          
+          <!-- Group table -->
+          <table class="min-w-full divide-y divide-gray-200">
+            <colgroup>
+              <col style="width: 140px !important; min-width: 140px !important; max-width: 140px !important;">
+              <% for (let i = 0; i < daysInMonth.length; i++) { %>
+                <col style="width: 32px !important; min-width: 32px !important; max-width: 32px !important;">
+              <% } %>
+              <col style="width: 74px !important; min-width: 74px !important; max-width: 74px !important;">
+              <col style="width: 74px !important; min-width: 74px !important; max-width: 74px !important;">
+            </colgroup>
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10" style="width: 140px !important; min-width: 140px !important; max-width: 140px !important;">
+                  Pracownik
+                </th>
+                
+                <!-- Day headers -->
+                <% daysInMonth.forEach(date => { 
+                    const dayDate = new Date(date);
+                    const dayOfWeek = dayDate.getDay(); 
+                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                    const dateKey = date.split('T')[0]; 
+                    const isPublicHoliday = publicHolidays[dateKey];
+                    
+                    let headerClass = "px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider";
+                    if (isPublicHoliday) {
+                      headerClass += " bg-purple-100";
+                    } else if (isWeekend) {
+                      headerClass += " bg-gray-100";
+                    }
+                    
+                    let headerTitle = isPublicHoliday ? isPublicHoliday : '';
+                    if (dayDate.getDate() === 20 || dayDate.getDate() === 21) {
+                      headerTitle += ` (${dateKey})`;
+                    }
+                %>
+                  <th scope="col" class="<%= headerClass %>" title="<%= headerTitle %>" style="width: 32px !important; min-width: 32px !important; max-width: 32px !important;">
+                    <%= dayDate.getDate() %>
+                  </th>
+                <% }); %>
+                
+                <th scope="col" class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50 z-10" style="width: 74px !important; min-width: 74px !important; max-width: 74px !important;">
+                  Praca
+                </th>
+                <th scope="col" class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50 z-10" style="width: 74px !important; min-width: 74px !important; max-width: 74px !important;">
+                  Łącznie
+                </th>
+              </tr>
+            </thead>
+            
+            <tbody class="bg-white divide-y divide-gray-200">
+              <% if (group.employees.length === 0) { %>
+                <tr>
+                  <td colspan="<%= daysInMonth.length + 3 %>" class="px-2 py-3 text-center text-sm text-gray-500">
+                    Brak pracowników w tej grupie
+                  </td>
+                </tr>
+              <% } else { %>
+                <% group.employees.forEach((employee, employeeIndex) => { %>
+                  <% 
+                    // Count weekday holidays and public holidays (Mon-Fri only)
+                    let weekdayHolidaysCount = 0;
+                    let weekdayPublicHolidaysCount = 0;
+                    
+                    // Process employee holidays
+                    employee.holidays.forEach(date => {
+                      const holidayDate = new Date(date);
+                      const dayOfWeek = holidayDate.getDay();
+                      // Count only weekdays (1-5 = Mon-Fri)
+                      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                        weekdayHolidaysCount += 1;
+                      }
+                    });
+                    
+                    // Process public holidays
+                    Object.keys(publicHolidays).forEach(date => {
+                      const pubHolidayDate = new Date(date);
+                      const dayOfWeek = pubHolidayDate.getDay();
+                      // Count only weekdays and don't double-count employee holidays
+                      if (dayOfWeek >= 1 && dayOfWeek <= 5 && !employee.holidays.includes(date)) {
+                        weekdayPublicHolidaysCount += 1;
+                      }
+                    });
+                    
+                    // Standard workday is 8 hours
+                    const standardWorkHours = 8;
+                    
+                    // Calculate the combined total (work hours + holiday days * 8 hours)
+                    const combinedTotal = employee.totalHours + 
+                                          (weekdayHolidaysCount * standardWorkHours) + 
+                                          (weekdayPublicHolidaysCount * standardWorkHours);
+                  %>
+                  <tr class="<%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %>">
+                    <!-- Employee name (sticky) -->
+                    <td class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10" style="width: 140px !important; min-width: 140px !important; max-width: 140px !important;" title="<%= employee.user.email %>">
+                      <%= employee.user.email.split('@')[0] %>
+                    </td>
+                    
+                    <!-- Hours for each day -->
+                    <% daysInMonth.forEach(date => { 
+                        const hours = employee.dateToHoursMap[date] || 0;
+                        const isHoliday = employee.holidays.includes(date);
+                        const dayDate = new Date(date);
+                        const dayOfWeek = dayDate.getDay();
+                        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                        const dateKey = date.split('T')[0]; 
+                        const isPublicHoliday = publicHolidays[dateKey];
+                        
+                        let cellClass = "px-1 py-2 whitespace-nowrap text-sm text-center";
+                        let tooltip = '';
+                        
+                        if (isHoliday) {
+                          cellClass += " bg-red-100";
+                          tooltip = 'Urlop';
+                        } else if (isPublicHoliday) {
+                          cellClass += " bg-purple-100";
+                          tooltip = `Święto: ${isPublicHoliday}`;
+                        } else if (isWeekend) {
+                          cellClass += " bg-gray-100";
+                        } else if (hours > 0) {
+                          cellClass += " bg-green-100";
+                        }
+                        
+                        if (dayDate.getDate() === 20 || dayDate.getDate() === 21) {
+                          tooltip += ` (${dateKey})`;
+                        }
+                    %>
+                      <td class="<%= cellClass %>" title="<%= tooltip %>" style="width: 32px !important; min-width: 32px !important; max-width: 32px !important;">
+                        <%= hours > 0 ? hours : '' %>
+                        <%= isHoliday ? 'U' : '' %>
+                      </td>
+                    <% }); %>
+                    
+                    <!-- Work hours total (sticky) -->
+                    <td class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900 text-center sticky right-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10" style="width: 74px !important; min-width: 74px !important; max-width: 74px !important;">
+                      <%= employee.totalHours.toFixed(1) %>
+                    </td>
+                    
+                    <!-- Combined total including holidays (sticky) -->
+                    <td class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900 text-center sticky right-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10" style="width: 74px !important; min-width: 74px !important; max-width: 74px !important;">
+                      <%= combinedTotal.toFixed(1) %>
+                    </td>
+                  </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Auto-submit form when month or year changes
+  document.getElementById('month').addEventListener('change', function() {
+    this.form.submit();
+  });
+  
+  document.getElementById('year').addEventListener('change', function() {
+    this.form.submit();
+  });
+</script> 

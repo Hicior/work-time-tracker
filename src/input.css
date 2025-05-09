@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+/* Custom styles can be added here */
+
+/*------------------------------------*\
+    #HOURS-INPUT-FIELD
+\*------------------------------------*/
+
+/* Custom styles for the hours input field */
+input[type="number"].hours-input {
+  /* Hide the increment/decrement arrows by default */
+  -moz-appearance: textfield;
+}
+
+/* Hide the spinner buttons in Chrome, Safari, Edge, Opera */
+input[type="number"].hours-input::-webkit-inner-spin-button,
+input[type="number"].hours-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Custom arrow button styles */
+.hours-control-btn {
+  transition: all 0.15s ease;
+}
+
+.hours-control-btn:active {
+  transform: scale(0.95);
+}
