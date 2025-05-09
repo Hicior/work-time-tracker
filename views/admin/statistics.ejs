@@ -53,7 +53,10 @@
         <div class="grid grid-cols-7 gap-1">
           <!-- Day boxes -->
           <% workData.forEach(day => { %>
-            <div class="relative min-w-[90px] w-full aspect-square rounded-lg border <%= day.hours > 0 ? 'border-blue-500 bg-blue-50' : 'border-gray-300' %> flex flex-col items-center justify-center shadow-sm hover:shadow-md transition-shadow p-1">
+            <div class="relative min-w-[90px] w-full aspect-square rounded-lg border <%= day.hours > 0 ? 'border-blue-500 bg-blue-50' : 'border-gray-300' %> flex flex-col items-center justify-center shadow-sm hover:shadow-md transition-shadow p-1 daybox" 
+                data-date="<%= day.date %>" 
+                data-hours="<%= day.hours %>" 
+                data-user-id="<%= selectedUserId %>">
               <!-- Day number (small, top right) -->
               <span class="absolute top-0 right-0.5 text-sm text-gray-500"><%= day.day %></span>
               
@@ -66,21 +69,38 @@
                 <%= weekdayAbbr %>
               </span>
               
-              <!-- Hours (center, large) -->
-              <span class="text-base font-bold <%= day.hours > 0 ? 'text-blue-500' : 'text-gray-400' %>">
+              <!-- Hours (center, large) - this will be hidden when editing -->
+              <span class="text-base font-bold <%= day.hours > 0 ? 'text-blue-500' : 'text-gray-400' %> hours-display">
                 <%= day.hours > 0 ? day.hours : '-' %>
               </span>
               
+              <!-- Edit input (hidden by default) -->
+              <input type="number" step="0.5" min="0" class="hidden w-10 text-center bg-white border-blue-300 rounded text-blue-600 font-bold hours-input" value="<%= day.hours > 0 ? day.hours : '' %>" placeholder="0">
+              
+              <!-- Confirmation buttons (hidden by default) -->
+              <div class="hidden absolute top-0 left-0 right-0 items-center justify-center space-x-2 bg-transparent py-1 rounded-t-lg confirmation-buttons">
+                <button class="confirm-btn text-green-600 hover:text-green-800">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+                <button class="cancel-btn text-red-600 hover:text-red-800">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
               <!-- Label for hours -->
-              <span class="text-xs text-gray-500">
+              <span class="text-xs text-gray-500 hours-label">
                 <%= day.hours === 1 ? 'h' : 'h' %>
               </span>
               
               <!-- Holiday or Public Holiday information -->
               <% if (day.isPublicHoliday) { %>
-                <span class="text-xs text-blue-600 mt-1">święto</span>
+                <span class="text-xs text-blue-600 mt-1 holiday-label">święto</span>
               <% } else if (day.isHoliday) { %>
-                <span class="text-xs text-green-600 mt-1">urlop</span>
+                <span class="text-xs text-green-600 mt-1 holiday-label">urlop</span>
               <% } %>
             </div>
           <% }); %>
@@ -119,7 +139,7 @@
   <% } %>
 </div>
 
-<!-- JavaScript for auto-submit on filter change -->
+<!-- JavaScript for auto-submit on filter change and inline editing -->
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const filterForm = document.querySelector('form');
@@ -130,5 +150,215 @@
         filterForm.submit();
       });
     });
+    
+    // Inline editing functionality
+    const dayboxes = document.querySelectorAll('.daybox');
+    
+    // Add click outside event listener
+    document.addEventListener('click', function(e) {
+      const editingBoxes = document.querySelectorAll('.daybox.editing');
+      if (editingBoxes.length > 0) {
+        // Check if the click was outside all editing boxes
+        let clickedOutside = true;
+        
+        editingBoxes.forEach(box => {
+          if (box.contains(e.target)) {
+            clickedOutside = false;
+          }
+        });
+        
+        if (clickedOutside) {
+          // Cancel editing for all open boxes
+          editingBoxes.forEach(box => {
+            cancelEditing(box);
+          });
+        }
+      }
+    });
+    
+    dayboxes.forEach(box => {
+      box.addEventListener('click', function() {
+        // Don't allow multiple editing at once - close any open editors
+        document.querySelectorAll('.daybox.editing').forEach(openBox => {
+          if (openBox !== box) {
+            cancelEditing(openBox);
+          }
+        });
+        
+        // Start editing this box
+        if (!box.classList.contains('editing')) {
+          startEditing(box);
+        }
+      });
+      
+      // Setup confirmation buttons
+      const confirmBtn = box.querySelector('.confirm-btn');
+      const cancelBtn = box.querySelector('.cancel-btn');
+      const input = box.querySelector('.hours-input');
+      
+      confirmBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        saveChanges(box);
+      });
+      
+      cancelBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        cancelEditing(box);
+      });
+      
+      // Allow pressing Enter to confirm
+      input.addEventListener('keyup', function(e) {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          saveChanges(box);
+        } else if (e.key === 'Escape') {
+          cancelEditing(box);
+        }
+      });
+    });
+    
+    function startEditing(box) {
+      // Mark as editing
+      box.classList.add('editing');
+      
+      // Hide hours display, show input
+      box.querySelector('.hours-display').classList.add('hidden');
+      box.querySelector('.hours-input').classList.remove('hidden');
+      box.querySelector('.hours-input').focus();
+      
+      // Show confirmation buttons
+      box.querySelector('.confirmation-buttons').classList.remove('hidden');
+      box.querySelector('.confirmation-buttons').classList.add('flex');
+      
+      // Hide hours label during editing
+      box.querySelector('.hours-label').classList.add('hidden');
+      
+      // Hide holiday label during editing
+      const holidayLabel = box.querySelector('.holiday-label');
+      if (holidayLabel) {
+        holidayLabel.classList.add('hidden');
+      }
+    }
+    
+    function cancelEditing(box) {
+      // Reset to original state
+      box.classList.remove('editing');
+      
+      // Show hours display, hide input
+      box.querySelector('.hours-display').classList.remove('hidden');
+      box.querySelector('.hours-input').classList.add('hidden');
+      
+      // Reset input value to original hours
+      const originalHours = parseFloat(box.dataset.hours) || '';
+      box.querySelector('.hours-input').value = originalHours === 0 ? '' : originalHours;
+      
+      // Hide confirmation buttons
+      box.querySelector('.confirmation-buttons').classList.add('hidden');
+      box.querySelector('.confirmation-buttons').classList.remove('flex');
+      
+      // Show hours label
+      box.querySelector('.hours-label').classList.remove('hidden');
+      
+      // Show holiday label
+      const holidayLabel = box.querySelector('.holiday-label');
+      if (holidayLabel) {
+        holidayLabel.classList.remove('hidden');
+      }
+    }
+    
+    function saveChanges(box) {
+      const userId = box.dataset.userId;
+      const date = box.dataset.date;
+      const input = box.querySelector('.hours-input');
+      const newHoursValue = input.value.trim();
+      const newHours = newHoursValue === '' ? 0 : parseFloat(newHoursValue);
+      
+      // Validate input
+      if (newHoursValue !== '' && (isNaN(newHours) || newHours < 0)) {
+        alert('Proszę wprowadzić poprawną liczbę godzin.');
+        input.focus();
+        return;
+      }
+      
+      // Show processing state
+      box.classList.add('opacity-50');
+      
+      // Make API call to update hours
+      fetch('/work-hours/statistics/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          work_date: date,
+          total_hours: newHours
+        })
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to update work hours');
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Update display
+        const hoursDisplay = box.querySelector('.hours-display');
+        
+        if (newHours === 0) {
+          hoursDisplay.textContent = '-';
+          hoursDisplay.classList.remove('text-blue-500');
+          hoursDisplay.classList.add('text-gray-400');
+          box.classList.remove('border-blue-500', 'bg-blue-50');
+          box.classList.add('border-gray-300');
+          box.dataset.hours = 0;
+          
+          // Show success toast - use window.showNotification
+          window.showNotification('Godziny pracy zostały usunięte.', 'success');
+        } else {
+          hoursDisplay.textContent = newHours;
+          hoursDisplay.classList.add('text-blue-500');
+          hoursDisplay.classList.remove('text-gray-400');
+          box.classList.add('border-blue-500', 'bg-blue-50');
+          box.classList.remove('border-gray-300');
+          box.dataset.hours = newHours;
+          
+          // Show success toast - use window.showNotification
+          window.showNotification('Godziny pracy zostały zaktualizowane.', 'success');
+        }
+        
+        // Update monthly totals
+        updateMonthlyTotals();
+        
+        // Exit edit mode
+        cancelEditing(box);
+      })
+      .catch(error => {
+        console.error('Error updating work hours:', error);
+        window.showNotification('Wystąpił błąd podczas aktualizacji godzin pracy.', 'error');
+      })
+      .finally(() => {
+        box.classList.remove('opacity-50');
+      });
+    }
+    
+    function updateMonthlyTotals() {
+      // Recalculate work hours total
+      let workHoursTotal = 0;
+      dayboxes.forEach(box => {
+        workHoursTotal += parseFloat(box.dataset.hours) || 0;
+      });
+      
+      // Update the display
+      const workHoursTotalElement = document.querySelector('.bg-blue-50 .text-2xl');
+      if (workHoursTotalElement) {
+        workHoursTotalElement.textContent = Math.round(workHoursTotal * 100) / 100;
+      }
+      
+      // Note: We'd need to do a page refresh to get the true updated combined total,
+      // since that calculation includes holidays which we don't have full data for in the frontend
+    }
   });
-</script> 
+</script>
+
+<!-- Remove the duplicate style for number inputs since it's now in the notification partial --> 

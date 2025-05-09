@@ -529,4 +529,70 @@ router.get("/statistics", async (req, res) => {
   }
 });
 
+// API endpoint to update work hours from statistics page
+router.post("/statistics/update", async (req, res) => {
+  try {
+    // Only allow admin access
+    if (!req.user.isAdmin()) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const { user_id, work_date, total_hours } = req.body;
+
+    // Validate input
+    if (!user_id || !work_date) {
+      return res.status(400).json({ error: "Missing required parameters" });
+    }
+
+    if (typeof total_hours !== "number" && total_hours !== 0) {
+      return res.status(400).json({ error: "Invalid hours value" });
+    }
+
+    // Check if the user exists
+    const user = await User.findById(user_id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Get existing work hours for this date and user
+    const existingEntries = await WorkHours.findByUserAndDate(
+      user_id,
+      work_date
+    );
+
+    if (total_hours === 0) {
+      // Delete work hours entry if it exists
+      if (existingEntries && existingEntries.length > 0) {
+        await existingEntries[0].delete();
+        return res.json({ success: true, message: "Work hours deleted" });
+      } else {
+        // Nothing to delete
+        return res.json({ success: true, message: "No work hours to delete" });
+      }
+    } else {
+      // Create or update work hours entry
+      const result = await WorkHours.createOrUpdate({
+        user_id,
+        work_date,
+        total_hours,
+      });
+
+      return res.json({
+        success: true,
+        message:
+          existingEntries.length > 0
+            ? "Work hours updated"
+            : "Work hours created",
+        data: {
+          id: result.id,
+          total_hours: result.total_hours,
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Error updating work hours from statistics:", error);
+    return res.status(500).json({ error: "Failed to update work hours" });
+  }
+});
+
 module.exports = router;

@@ -16,20 +16,188 @@
 </button>
 %>
 
-<script>
-  function showNotification(message, type, duration) {
-    // Check if showNotification is available (script is loaded)
-    if (typeof window.showNotification === "function") {
-      window.showNotification(message, type, duration);
-    } else {
-      // Script not loaded yet, wait for it
-      window.addEventListener("DOMContentLoaded", () => {
-        if (typeof window.showNotification === "function") {
-          window.showNotification(message, type, duration);
-        } else {
-          console.error("Notification system not loaded");
-        }
-      });
+<!-- Toast notification container -->
+<div
+  id="toast-container"
+  class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
+
+<style>
+  /* Remove arrows/spinners from number inputs */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* For Firefox */
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  /* Animation for toast notifications */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+  }
+
+  .toast-enter {
+    animation: fadeIn 0.3s ease forwards;
+  }
+
+  .toast-exit {
+    animation: fadeOut 0.3s ease forwards;
+  }
+</style>
+
+<script>
+  // Create the toast container if it doesn't exist
+  document.addEventListener("DOMContentLoaded", function () {
+    if (!document.getElementById("toast-container")) {
+      const container = document.createElement("div");
+      container.id = "toast-container";
+      container.className = "fixed top-4 right-4 z-50 flex flex-col gap-2";
+      document.body.appendChild(container);
+    }
+  });
+
+  // Main notification function
+  window.showNotification = function (message, type = "info", duration = 3000) {
+    const toastContainer = document.getElementById("toast-container");
+    if (!toastContainer) return;
+
+    // Map the old warning type to new system
+    if (type === "warning") {
+      type = "warn";
+    }
+
+    // Create toast element
+    const toast = document.createElement("div");
+    toast.className = `flex items-center p-4 mb-4 rounded-lg shadow-md max-w-xs toast-enter ${
+      type === "success"
+        ? "bg-green-50 text-green-800 border border-green-300"
+        : type === "error"
+        ? "bg-red-50 text-red-800 border border-red-300"
+        : type === "warn"
+        ? "bg-yellow-50 text-yellow-800 border border-yellow-300"
+        : "bg-blue-50 text-blue-800 border border-blue-300"
+    }`;
+
+    // Add icon based on type
+    let iconSvg = "";
+    if (type === "success") {
+      iconSvg =
+        '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>';
+    } else if (type === "error") {
+      iconSvg =
+        '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>';
+    } else if (type === "warn") {
+      iconSvg =
+        '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>';
+    } else {
+      iconSvg =
+        '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>';
+    }
+
+    // Set toast content
+    toast.innerHTML = `
+      <div class="flex items-center">
+        ${iconSvg}
+        <span>${message}</span>
+      </div>
+      <button type="button" class="ml-auto -mx-1.5 -my-1.5 rounded-lg p-1.5 inline-flex items-center justify-center h-8 w-8 ${
+        type === "success"
+          ? "text-green-500 hover:text-green-700"
+          : type === "error"
+          ? "text-red-500 hover:text-red-700"
+          : type === "warn"
+          ? "text-yellow-500 hover:text-yellow-700"
+          : "text-blue-500 hover:text-blue-700"
+      }">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+      </button>
+    `;
+
+    // Add close button functionality
+    toast.querySelector("button").addEventListener("click", () => {
+      removeToast(toast);
+    });
+
+    // Add to container
+    toastContainer.appendChild(toast);
+
+    // Auto-remove after specified duration
+    setTimeout(() => {
+      removeToast(toast);
+    }, duration);
+  };
+
+  function removeToast(toast) {
+    toast.classList.remove("toast-enter");
+    toast.classList.add("toast-exit");
+
+    // Remove after animation completes
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 300);
+  }
+
+  // Process URL parameters to show notifications
+  document.addEventListener("DOMContentLoaded", function () {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Check for success message
+    if (urlParams.has("success")) {
+      showNotification(
+        document.querySelector('[data-message="success"]')?.textContent ||
+          "Operacja zakończona pomyślnie",
+        "success"
+      );
+    }
+
+    // Check for error message
+    if (urlParams.has("error")) {
+      showNotification(
+        document.querySelector('[data-message="error"]')?.textContent ||
+          "Wystąpił błąd",
+        "error"
+      );
+    }
+
+    // Check for info message
+    if (urlParams.has("info")) {
+      showNotification(
+        document.querySelector('[data-message="info"]')?.textContent ||
+          "Informacja",
+        "info"
+      );
+    }
+
+    // Check for warning message
+    if (urlParams.has("warning")) {
+      showNotification(
+        document.querySelector('[data-message="warning"]')?.textContent ||
+          "Ostrzeżenie",
+        "warn"
+      );
+    }
+  });
 </script>

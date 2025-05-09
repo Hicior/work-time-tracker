@@ -8,43 +8,25 @@
       - System Ewidencji Czasu Pracy
     </title>
     <link rel="stylesheet" href="/css/output.css" />
-    <script src="/js/notifications.js" defer></script>
     <% // Set default values if not provided %> <% if (typeof currentPage ===
     'undefined') { currentPage = ''; } %>
   </head>
   <body class="bg-gray-50 min-h-screen flex flex-col">
-    <!-- Flash messages container (hidden) -->
+    <!-- Include notification partial -->
+    <%- include('../partials/notification-script') %>
+
+    <!-- Flash messages (hidden) -->
     <div id="flash-messages" style="display: none">
       <% if (typeof messages !== 'undefined') { %> <% if (messages.success) { %>
-      <input
-        type="hidden"
-        data-type="success"
-        value="<%= messages.success %>" />
+      <div data-message="success"><%= messages.success %></div>
       <% } %> <% if (messages.error) { %>
-      <input type="hidden" data-type="error" value="<%= messages.error %>" />
+      <div data-message="error"><%= messages.error %></div>
       <% } %> <% if (messages.info) { %>
-      <input type="hidden" data-type="info" value="<%= messages.info %>" />
+      <div data-message="info"><%= messages.info %></div>
       <% } %> <% if (messages.warning) { %>
-      <input
-        type="hidden"
-        data-type="warning"
-        value="<%= messages.warning %>" />
+      <div data-message="warning"><%= messages.warning %></div>
       <% } %> <% } %>
     </div>
-
-    <script>
-      // Process flash messages from hidden inputs
-      document.addEventListener("DOMContentLoaded", function () {
-        var container = document.getElementById("flash-messages");
-        var inputs = container.querySelectorAll('input[type="hidden"]');
-
-        inputs.forEach(function (input) {
-          var message = input.value;
-          var type = input.getAttribute("data-type");
-          window.showNotification(message, type);
-        });
-      });
-    </script>
 
     <header class="bg-white shadow">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
