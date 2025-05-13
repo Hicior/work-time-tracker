@@ -73,14 +73,12 @@
   </div>
 
   <!-- Two-column layout for entry form and history -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:divide-x md:divide-gray-300">
+  <div
+    class="grid grid-cols-1 md:grid-cols-2 gap-4 md:divide-x md:divide-gray-300">
     <!-- Left column: Add new entry -->
     <div class="md:pr-5">
       <h3 class="text-lg font-medium text-gray-900 mb-3">Dodaj nowy wpis</h3>
-      <form
-        action="/work-hours"
-        method="POST"
-        class="p-3">
+      <form action="/work-hours" method="POST" class="p-3">
         <div class="mb-4">
           <label
             for="work_date"
@@ -92,13 +90,11 @@
             name="work_date"
             class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2"
             required>
-            <option value="<%= todayDate %>">Dzisiaj (<%= todayDate %>)</option>
-            <option value="<%= yesterdayDate %>">
-              Wczoraj (<%= yesterdayDate %>)
+            <% validDates.forEach(dateInfo => { %>
+            <option value="<%= dateInfo.formattedDate %>">
+              <%= dateInfo.label %> (<%= dateInfo.formattedDate %>)
             </option>
-            <option value="<%= dayBeforeYesterdayDate %>">
-              Przedwczoraj (<%= dayBeforeYesterdayDate %>)
-            </option>
+            <% }); %>
           </select>
         </div>
 
@@ -209,7 +205,7 @@
     <!-- Right column: Entry history -->
     <div class="md:pl-5">
       <h3 class="text-lg font-medium text-gray-900 mb-3">
-        Twoje wpisy (Ostatnie 3 dni)
+        Twoje wpisy (Ostatnie 3 dni robocze)
       </h3>
 
       <% if (workHours && workHours.length > 0) { %>
@@ -306,7 +302,7 @@
       </div>
       <% } else { %>
       <div class="p-3">
-        <p class="text-gray-700">Brak wpisów dla ostatnich 3 dni.</p>
+        <p class="text-gray-700">Brak wpisów dla ostatnich dni.</p>
       </div>
       <% } %>
     </div>
@@ -353,5 +349,3 @@
     form.classList.toggle("hidden");
   }
 </script>
-
-</div>

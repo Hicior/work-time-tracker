@@ -20,18 +20,74 @@ const {
 const { prepareMessages } = require("../utils/messageUtils"); // Import message utility
 const User = require("../models/User");
 
-// Helper function to get dates for today, yesterday, and the day before yesterday
+// Helper function to get dates for the last 3 working days including weekend days in between
 const getValidDates = () => {
   const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  const dayBeforeYesterday = new Date(today); // Create new date object for day before yesterday
-  dayBeforeYesterday.setDate(today.getDate() - 2); // Set date to two days ago
+  const validDates = [];
+  let currentDate = new Date(today);
+  let workingDaysCount = 0;
+
+  // Add today regardless of whether it's a weekend
+  validDates.push({
+    date: new Date(currentDate),
+    label: "Dzisiaj",
+    formattedDate: formatDate(currentDate),
+    isWeekend: [0, 6].includes(currentDate.getDay()),
+  });
+
+  if ([1, 2, 3, 4, 5].includes(currentDate.getDay())) {
+    workingDaysCount++; // Count today if it's a workday
+  }
+
+  // Find dates up to the last 3 working days + weekends in between
+  let daysBack = 0;
+  while (workingDaysCount < 3 && daysBack < 14) {
+    // Safety limit of 14 days back
+    daysBack++;
+
+    // Move to previous day
+    const previousDate = new Date(currentDate);
+    previousDate.setDate(currentDate.getDate() - daysBack);
+
+    const dayOfWeek = previousDate.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // 0 = Sunday, 6 = Saturday
+
+    // Create label based on position
+    let label;
+    if (daysBack === 1) {
+      label = "Wczoraj";
+    } else {
+      label = getDayOfWeekName(formatDate(previousDate));
+    }
+
+    // Add the date to our valid dates
+    validDates.push({
+      date: new Date(previousDate),
+      label: label,
+      formattedDate: formatDate(previousDate),
+      isWeekend: isWeekend,
+    });
+
+    // Count working days
+    if (!isWeekend) {
+      workingDaysCount++;
+    }
+  }
+
+  // Sort dates in descending order (most recent first)
+  validDates.sort((a, b) => b.date - a.date);
+
+  const oldToday = new Date(today);
+  const yesterday = new Date(oldToday);
+  yesterday.setDate(oldToday.getDate() - 1);
+  const dayBeforeYesterday = new Date(oldToday);
+  dayBeforeYesterday.setDate(oldToday.getDate() - 2);
 
   return {
+    dates: validDates,
     today: formatDate(today),
     yesterday: formatDate(yesterday),
-    dayBeforeYesterday: formatDate(dayBeforeYesterday), // Return formatted day before yesterday
+    dayBeforeYesterday: formatDate(dayBeforeYesterday),
   };
 };
 
@@ -40,25 +96,21 @@ router.get("/", async (req, res) => {
   try {
     // Get authenticated user ID
     const userId = req.user.id;
-    const { today, yesterday, dayBeforeYesterday } = getValidDates(); // Get all three dates
+    const validDates = getValidDates(); // Get valid working dates
+    const { dates, today } = validDates;
 
-    // Get work hours for today, yesterday, and day before yesterday
-    const workHoursToday = await WorkHours.findByUserAndDate(userId, today);
-    const workHoursYesterday = await WorkHours.findByUserAndDate(
-      userId,
-      yesterday
-    );
-    const workHoursDayBeforeYesterday = await WorkHours.findByUserAndDate(
-      // Fetch day before yesterday's hours
-      userId,
-      dayBeforeYesterday
-    );
-    // Combine and display hours from the last three days, sorted by date
-    const workHours = [
-      ...workHoursDayBeforeYesterday,
-      ...workHoursYesterday,
-      ...workHoursToday,
-    ].sort((a, b) => new Date(b.work_date) - new Date(a.work_date)); // Sort descending
+    // Get work hours for valid dates
+    let workHours = [];
+    for (const dateInfo of dates) {
+      const entries = await WorkHours.findByUserAndDate(
+        userId,
+        dateInfo.formattedDate
+      );
+      workHours = [...workHours, ...entries];
+    }
+
+    // Sort by date (descending)
+    workHours.sort((a, b) => new Date(b.work_date) - new Date(a.work_date));
 
     // Add weekday names to each entry and format dates
     workHours.forEach((entry) => {
@@ -117,9 +169,10 @@ router.get("/", async (req, res) => {
       title: "Czas pracy",
       currentPage: "work-hours",
       workHours, // Pass combined and sorted work hours
+      validDates: dates, // Pass valid workdays
       todayDate: today,
-      yesterdayDate: yesterday,
-      dayBeforeYesterdayDate: dayBeforeYesterday, // Pass day before yesterday's date
+      yesterdayDate: validDates.yesterday,
+      dayBeforeYesterdayDate: validDates.dayBeforeYesterday,
       isHolidayToday,
       publicHolidays, // Pass full public holidays list to the view
       publicHolidaysOnWorkdays, // Pass weekday public holidays array
@@ -141,7 +194,7 @@ router.get("/", async (req, res) => {
     });
   } catch (error) {
     console.error("Error loading work hours:", error);
-    const { today } = getValidDates();
+    const validDates = getValidDates();
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
     const workDaysInMonth = getWeekdaysInMonth(currentYear, currentMonth);
@@ -151,9 +204,10 @@ router.get("/", async (req, res) => {
       title: "Czas pracy",
       currentPage: "work-hours",
       workHours: [],
-      todayDate: today,
-      yesterdayDate: getValidDates().yesterday,
-      dayBeforeYesterdayDate: getValidDates().dayBeforeYesterday, // Add in error case too
+      validDates: validDates.dates, // Pass valid workdays even in error case
+      todayDate: validDates.today,
+      yesterdayDate: validDates.yesterday,
+      dayBeforeYesterdayDate: validDates.dayBeforeYesterday,
       isHolidayToday: false,
       publicHolidays: [], // Empty array in error case
       publicHolidaysOnWorkdays: [], // Empty array in error case
@@ -182,15 +236,14 @@ router.post("/", async (req, res) => {
     // Get authenticated user ID
     const userId = req.user.id;
     const { work_date, total_hours_str } = req.body; // Get total_hours as string
-    const { today, yesterday, dayBeforeYesterday } = getValidDates(); // Get all valid dates
+    const validDates = getValidDates(); // Get valid dates
+
+    // Extract valid formatted dates for validation
+    const validFormattedDates = validDates.dates.map((d) => d.formattedDate);
 
     // --- Validation ---
-    // 1. Check if date is valid (today, yesterday, or day before yesterday)
-    if (
-      work_date !== today &&
-      work_date !== yesterday &&
-      work_date !== dayBeforeYesterday // Allow day before yesterday
-    ) {
+    // 1. Check if date is valid (one of the last 3 working days)
+    if (!validFormattedDates.includes(work_date)) {
       console.warn(`Invalid date attempt: ${work_date} by user ${userId}`);
       return res.redirect("/work-hours?error=invalid_date");
     }
@@ -235,7 +288,10 @@ router.post("/:id", async (req, res) => {
     const { id } = req.params;
     const { total_hours_str } = req.body; // Get total_hours as string for update
     const userId = req.user.id; // Get authenticated user ID
-    const { today, yesterday, dayBeforeYesterday } = getValidDates(); // Get all valid dates
+    const validDates = getValidDates(); // Get valid dates
+
+    // Extract valid formatted dates for validation
+    const validFormattedDates = validDates.dates.map((d) => d.formattedDate);
 
     // Get the work hours entry
     const workHoursEntry = await WorkHours.findById(id);
@@ -245,13 +301,8 @@ router.post("/:id", async (req, res) => {
     }
 
     // --- Validation ---
-    // 1. Check if the entry's date is within the allowed range (today, yesterday, day before yesterday)
-    //    This prevents updating older entries via manually crafting requests.
-    if (
-      workHoursEntry.work_date !== today &&
-      workHoursEntry.work_date !== yesterday &&
-      workHoursEntry.work_date !== dayBeforeYesterday // Allow day before yesterday
-    ) {
+    // 1. Check if the entry's date is within the allowed range (last 3 working days)
+    if (!validFormattedDates.includes(workHoursEntry.work_date)) {
       console.warn(
         `Update attempt on old entry (${workHoursEntry.work_date}) ID: ${id} by user ${userId}`
       );
@@ -289,7 +340,10 @@ router.post("/:id/delete", async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id; // Get authenticated user ID
-    const { today, yesterday, dayBeforeYesterday } = getValidDates(); // Get all valid dates
+    const validDates = getValidDates(); // Get valid dates
+
+    // Extract valid formatted dates for validation
+    const validFormattedDates = validDates.dates.map((d) => d.formattedDate);
 
     // Get the work hours entry
     const workHoursEntry = await WorkHours.findById(id);
@@ -299,11 +353,7 @@ router.post("/:id/delete", async (req, res) => {
     }
 
     // Prevent deleting older entries via manually crafting requests.
-    if (
-      workHoursEntry.work_date !== today &&
-      workHoursEntry.work_date !== yesterday &&
-      workHoursEntry.work_date !== dayBeforeYesterday // Allow day before yesterday
-    ) {
+    if (!validFormattedDates.includes(workHoursEntry.work_date)) {
       console.warn(
         `Delete attempt on old entry (${workHoursEntry.work_date}) ID: ${id} by user ${userId}`
       );
@@ -332,8 +382,7 @@ router.get("/statistics", async (req, res) => {
     const users = await User.getAll();
 
     // Get filter parameters
-    const selectedUserId =
-      req.query.user_id || (users.length > 0 ? users[0].id : null);
+    const selectedUserId = req.query.user_id || req.user.id; // Default to logged-in user
 
     // Parse month and year from query or use current month
     let selectedMonth = parseInt(req.query.month);
