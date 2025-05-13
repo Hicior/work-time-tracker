@@ -165,7 +165,8 @@
                 step="0.5"
                 value="8"
                 class="focus:ring-blue-500 focus:border-blue-500 text-center w-24 shadow-sm text-lg font-medium border-gray-300 p-2 hours-input"
-                oninput="updateHoursValue(this.value)" />
+                oninput="updateHoursValue(this.value)"
+                onclick="this.select()" />
               <button
                 type="button"
                 onclick="incrementHours()"
@@ -312,13 +313,37 @@
 <script>
   // Functions for hours input
   function updateHoursValue(value) {
-    // Ensure the value is within range
-    value = Math.max(0.5, Math.min(24, parseFloat(value) || 0.5));
+    // Convert comma to dot for decimal point
+    value = value.toString().replace(",", ".");
 
-    // Update displayed and hidden values
+    // Parse the value - don't apply min/max constraints during typing
+    let numValue = parseFloat(value);
+
+    if (!isNaN(numValue)) {
+      // Update displayed value
+      document.getElementById("hours_value").textContent = numValue;
+      document.getElementById("total_hours").value = numValue;
+    }
+  }
+
+  function validateHoursInput() {
+    const input = document.getElementById("hours_input");
+    let value = parseFloat(input.value.replace(",", "."));
+
+    // Apply min/max constraints only when leaving the field
+    if (isNaN(value) || value < 0.5) {
+      value = 0.5;
+    } else if (value > 24) {
+      value = 24;
+    }
+
+    // Round to nearest 0.5 if needed
+    value = Math.round(value * 2) / 2;
+
+    // Update all values
     document.getElementById("hours_value").textContent = value;
     document.getElementById("total_hours").value = value;
-    document.getElementById("hours_input").value = value;
+    input.value = value;
   }
 
   function setHours(value) {
@@ -328,7 +353,7 @@
 
   function incrementHours() {
     const input = document.getElementById("hours_input");
-    const currentValue = parseFloat(input.value) || 0.5;
+    const currentValue = parseFloat(input.value.replace(",", ".")) || 0.5;
     const newValue = Math.min(24, currentValue + 0.5);
     input.value = newValue;
     updateHoursValue(newValue);
@@ -336,7 +361,7 @@
 
   function decrementHours() {
     const input = document.getElementById("hours_input");
-    const currentValue = parseFloat(input.value) || 0.5;
+    const currentValue = parseFloat(input.value.replace(",", ".")) || 0.5;
     const newValue = Math.max(0.5, currentValue - 0.5);
     input.value = newValue;
     updateHoursValue(newValue);
@@ -348,4 +373,12 @@
     row.classList.toggle("hidden");
     form.classList.toggle("hidden");
   }
+
+  // Add event listener for validation when the input loses focus
+  document.addEventListener("DOMContentLoaded", function () {
+    const hoursInput = document.getElementById("hours_input");
+    if (hoursInput) {
+      hoursInput.addEventListener("blur", validateHoursInput);
+    }
+  });
 </script>

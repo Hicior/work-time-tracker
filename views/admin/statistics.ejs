@@ -42,12 +42,22 @@
   <!-- Calendar View -->
   <% if (workData.length > 0 && selectedUser) { %>
     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-      <h2 class="text-2xl font-semibold mb-4 text-gray-700">
-        Godziny pracy: <%= selectedUser.email %>
-      </h2>
-      <h3 class="text-lg font-medium text-gray-600 mb-6">
-        <%= months.find(m => m.value === selectedMonth).name %> <%= selectedYear %>
-      </h3>
+      <div class="relative">
+        <h2 class="text-2xl font-semibold mb-4 text-gray-700">
+          Godziny pracy: <%= selectedUser.email %>
+        </h2>
+        <h3 class="text-lg font-medium text-gray-600 mb-6">
+          <%= months.find(m => m.value === selectedMonth).name %> <%= selectedYear %>
+        </h3>
+        
+        <!-- Edit Information Notice -->
+        <div class="absolute top-0 right-0 text-sm text-blue-600 flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Kliknij w dzień, aby edytować godziny</span>
+        </div>
+      </div>
       
       <div class="w-fit">
         <div class="grid grid-cols-7 gap-1">

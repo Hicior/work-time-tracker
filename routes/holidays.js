@@ -16,6 +16,21 @@ const {
 } = require("../utils/dateUtils");
 const { prepareMessages } = require("../utils/messageUtils");
 
+// Helper function to generate dates between start and end date (inclusive)
+const generateDateRange = (startDate, endDate) => {
+  const dates = [];
+  const currentDate = new Date(startDate);
+  const lastDate = new Date(endDate);
+
+  // Add dates until we reach the end date
+  while (currentDate <= lastDate) {
+    dates.push(formatDate(new Date(currentDate)));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return dates;
+};
+
 // Helper function to get current month info
 const getCurrentMonthInfo = () => {
   const today = new Date();
@@ -168,20 +183,31 @@ router.post("/", async (req, res) => {
   try {
     // Get authenticated user ID
     const userId = req.user.id;
-    const { holiday_date } = req.body;
+    const { start_date, end_date } = req.body;
 
-    // Validate the date (cannot be empty)
-    if (!holiday_date) {
+    // Validate the start date (cannot be empty)
+    if (!start_date) {
       return res.redirect("/holidays?error=invalid_date");
     }
 
-    // Create holiday entry
-    await Holiday.create({
-      user_id: userId,
-      holiday_date,
-    });
+    // If end_date is not provided, use start_date as the end date (single day)
+    const actualEndDate = end_date || start_date;
 
-    res.redirect("/holidays?success=added");
+    // Generate all dates in the range
+    const holidayDates = generateDateRange(start_date, actualEndDate);
+
+    // Create holiday entries for each date in the range
+    for (const holiday_date of holidayDates) {
+      await Holiday.create({
+        user_id: userId,
+        holiday_date,
+      });
+    }
+
+    const daysCount = holidayDates.length;
+    const successMessage = daysCount > 1 ? `added_${daysCount}_days` : "added";
+
+    res.redirect(`/holidays?success=${successMessage}`);
   } catch (error) {
     console.error("Error adding holiday:", error);
     res.redirect("/holidays?error=failed");

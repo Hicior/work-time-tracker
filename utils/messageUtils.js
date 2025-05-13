@@ -63,7 +63,18 @@ const prepareMessages = (messages) => {
 
   // Process success messages
   if (messages.success) {
-    result.success = messageMap.success[messages.success] || messages.success;
+    // Check for added_X_days format (for multi-day holiday additions)
+    if (
+      messages.success.startsWith("added_") &&
+      messages.success.endsWith("_days")
+    ) {
+      const daysCount = messages.success
+        .replace("added_", "")
+        .replace("_days", "");
+      result.success = `Pomyślnie dodano ${daysCount} dni urlopowych.`;
+    } else {
+      result.success = messageMap.success[messages.success] || messages.success;
+    }
   }
 
   // Process error messages
