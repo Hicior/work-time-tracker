@@ -23,7 +23,7 @@ const config = {
   secret: process.env.AUTH0_SECRET,
   baseURL: process.env.AUTH0_BASE_URL,
   clientID: process.env.AUTH0_CLIENT_ID,
-  issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
+  issuerBaseURL: `https://${process.env.AUTH0_DOMAIN}`,
 };
 
 // auth router attaches /login, /logout, and /callback routes to the baseURL
@@ -135,12 +135,14 @@ app.get("/", async (req, res) => {
       // Calculate stats
       const hoursPerDay = 8;
       const workDaysInMonth = getWeekdaysInMonth(currentYear, currentMonth);
-      const requiredMonthlyHours = workDaysInMonth * hoursPerDay;
+      // Subtract public holidays from required monthly hours
+      const requiredMonthlyHours =
+        (workDaysInMonth - publicHolidaysOnWorkdays.length) * hoursPerDay;
 
       const totalHolidayHours = holidayCount * hoursPerDay;
       const publicHolidayHours = publicHolidaysOnWorkdays.length * hoursPerDay;
-      const totalCombinedHours =
-        totalWorkHours + totalHolidayHours + publicHolidayHours;
+      // Don't include public holidays in total combined hours
+      const totalCombinedHours = totalWorkHours + totalHolidayHours;
 
       const remainingHours = Math.max(
         0,

@@ -107,17 +107,18 @@ router.get("/", async (req, res) => {
     });
 
     const publicHolidaysOnWorkdaysCount = publicHolidaysOnWorkdays.length;
-    const requiredMonthlyHours = workDaysInMonth * hoursPerDay;
+    // Subtract public holidays from required monthly hours
+    const requiredMonthlyHours =
+      (workDaysInMonth - publicHolidaysOnWorkdaysCount) * hoursPerDay;
 
     const totalHolidayHours = holidayCount * hoursPerDay;
     // publicHolidayHours should still be based on holidays that grant a day off work
     const publicHolidayHours = publicHolidaysOnWorkdaysCount * hoursPerDay;
 
-    // For display in the UI - total includes public holidays
-    const totalCombinedHours =
-      totalWorkHours + totalHolidayHours + publicHolidayHours;
+    // Don't include public holidays in total combined hours
+    const totalCombinedHours = totalWorkHours + totalHolidayHours;
 
-    // Calculate remaining hours - include public holidays in the combined hours
+    // Calculate remaining hours - don't include public holidays in the combined hours
     const remainingHours = Math.max(
       0,
       requiredMonthlyHours - totalCombinedHours

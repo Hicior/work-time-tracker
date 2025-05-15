@@ -2,9 +2,7 @@
 isAuthenticated) { %>
 <div class="bg-white rounded-lg shadow p-6">
   <div class="text-center mb-8">
-    <h2 class="text-3xl font-bold text-gray-900">
-      System Ewidencji Czasu Pracy
-    </h2>
+    <h2 class="text-3xl font-bold text-gray-900">System Ewidencji Czasu</h2>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -105,7 +103,11 @@ isAuthenticated) { %>
     <div class="mb-8 bg-gray-50 rounded-lg p-4">
       <% if (typeof monthStats !== 'undefined') { %>
       <h3 class="text-lg font-medium text-gray-900 mb-4">
-        Podsumowanie miesiąca (<%= monthStats.requiredMonthlyHours %>h)
+        Podsumowanie miesiąca
+        <span
+          class="inline-flex items-center rounded-md bg-blue-100 px-2 py-1 text-base font-medium text-blue-700">
+          <%= monthStats.requiredMonthlyHours %>h
+        </span>
       </h3>
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
@@ -126,9 +128,7 @@ isAuthenticated) { %>
           <div class="text-xl font-semibold text-gray-900">
             <%= typeof publicHolidaysOnWorkdays !== 'undefined' ?
             publicHolidaysOnWorkdays.length : monthStats.publicHolidaysCount %>
-            dni (<%= typeof publicHolidaysOnWorkdays !== 'undefined' ?
-            publicHolidaysOnWorkdays.length * 8 : monthStats.publicHolidayHours
-            %>h)
+            dni
           </div>
         </div>
         <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">

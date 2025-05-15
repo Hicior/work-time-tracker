@@ -31,7 +31,11 @@
   <!-- Monthly statistics -->
   <div class="mb-8 bg-gray-50 rounded-lg p-4">
     <h3 class="text-lg font-medium text-gray-900 mb-4">
-      Podsumowanie miesiąca (<%= stats.requiredMonthlyHours %>h)
+      Podsumowanie miesiąca
+      <span
+        class="inline-flex items-center rounded-md bg-blue-100 px-2 py-1 text-base font-medium text-blue-700">
+        <%= stats.requiredMonthlyHours %>h
+      </span>
     </h3>
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
       <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
@@ -49,8 +53,7 @@
       <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
         <div class="text-sm text-gray-500 mb-1">Dni ustawowo wolne</div>
         <div class="text-xl font-semibold text-gray-900">
-          <%= stats.publicHolidayCount %> dni (<%=
-          stats.publicHolidaysOnWorkdays * 8 %>h)
+          <%= stats.publicHolidayCount %> dni
         </div>
       </div>
       <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
