@@ -177,9 +177,9 @@
                     const standardWorkHours = 8;
                     
                     // Calculate the combined total (work hours + holiday days * 8 hours)
+                    // Don't include public holidays in total combined hours
                     const combinedTotal = employee.totalHours + 
-                                          (weekdayHolidaysCount * standardWorkHours) + 
-                                          (weekdayPublicHolidaysCount * standardWorkHours);
+                                          (weekdayHolidaysCount * standardWorkHours);
                   %>
                   <tr class="<%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %>">
                     <!-- Employee name (sticky) -->

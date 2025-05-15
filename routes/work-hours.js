@@ -507,9 +507,7 @@ router.get("/statistics", async (req, res) => {
 
       // Calculate combined total exactly as dashboard does
       totalCombinedHours =
-        totalWorkHours +
-        weekdayHolidaysCount * standardWorkHours +
-        weekdayPublicHolidaysCount * standardWorkHours;
+        totalWorkHours + weekdayHolidaysCount * standardWorkHours;
 
       // Get the selected user's details
       const selectedUser = users.find((u) => u.id === parseInt(selectedUserId));
