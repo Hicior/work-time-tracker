@@ -45,6 +45,7 @@ const holidaysRoutes = require("./routes/holidays");
 const groupsRoutes = require("./routes/groups");
 const publicHolidaysRoutes = require("./routes/public-holidays");
 const dashboardRoutes = require("./routes/dashboard");
+const adminApiRoutes = require("./routes/admin-api");
 
 // Auth middleware
 const requireAuth = async (req, res, next) => {
@@ -243,7 +244,8 @@ app.post(
   }
 );
 
-// Use routes
+// Register routes
+app.use("/dashboard", requireAuth, dashboardRoutes);
 app.use("/work-hours", requireAuth, workHoursRoutes);
 app.use("/holidays", requireAuth, holidaysRoutes);
 app.use("/admin/groups", requireAuth, requireAdmin, groupsRoutes);
@@ -253,7 +255,7 @@ app.use(
   requireAdmin,
   publicHolidaysRoutes
 );
-app.use("/dashboard", requireAuth, requireAdmin, dashboardRoutes);
+app.use("/admin-api", requireAuth, requireAdmin, adminApiRoutes);
 
 // Create work-hours directory if it doesn't exist
 const fs = require("fs");

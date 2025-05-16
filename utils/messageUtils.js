@@ -17,6 +17,11 @@ const messageMap = {
     work_deleted: "Pomyślnie usunięto wpis czasu pracy.",
     work_updated: "Pomyślnie zaktualizowano wpis czasu pracy.",
 
+    // Admin-related messages
+    role_updated: "Rola użytkownika została zaktualizowana pomyślnie.",
+    users_synced: "Użytkownicy zostali zsynchronizowani z Auth0 pomyślnie.",
+    user_blocked: "Status użytkownika został zaktualizowany pomyślnie.",
+
     // Generic messages
     added: "Pomyślnie dodano wpis.",
     deleted: "Pomyślnie usunięto wpis.",

@@ -27,6 +27,7 @@ async function createSchema() {
         email TEXT NOT NULL UNIQUE,
         role TEXT DEFAULT 'user' CHECK(role IN ('admin', 'user')),
         group_id INTEGER,
+        is_blocked BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (group_id) REFERENCES groups (id)

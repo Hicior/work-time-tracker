@@ -13,6 +13,7 @@ class User {
     this.email = data.email;
     this.role = data.role;
     this.group_id = data.group_id;
+    this.is_blocked = data.is_blocked;
     this.created_at = data.created_at;
     this.last_login = data.last_login;
   }
@@ -65,20 +66,20 @@ class User {
       // Check if user already exists by Auth0 ID or email
       const existingUserByAuth0 = await User.findByAuth0Id(auth0User.sub);
       if (existingUserByAuth0) {
-        // Update last login time
+        // Update last login time and blocked status
         await dbAsync.run(
-          "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1",
-          [existingUserByAuth0.id]
+          "UPDATE users SET last_login = CURRENT_TIMESTAMP, is_blocked = $1 WHERE id = $2",
+          [auth0User.blocked || false, existingUserByAuth0.id]
         );
-        return existingUserByAuth0;
+        return await User.findById(existingUserByAuth0.id);
       }
 
       const existingUserByEmail = await User.findByEmail(auth0User.email);
       if (existingUserByEmail) {
-        // Link existing account with Auth0 ID and update last login
+        // Link existing account with Auth0 ID and update last login and blocked status
         await dbAsync.run(
-          "UPDATE users SET auth0_id = $1, last_login = CURRENT_TIMESTAMP WHERE id = $2",
-          [auth0User.sub, existingUserByEmail.id]
+          "UPDATE users SET auth0_id = $1, last_login = CURRENT_TIMESTAMP, is_blocked = $2 WHERE id = $3",
+          [auth0User.sub, auth0User.blocked || false, existingUserByEmail.id]
         );
         return await User.findById(existingUserByEmail.id);
       }
@@ -89,8 +90,8 @@ class User {
 
       // Create new user
       const result = await dbAsync.run(
-        "INSERT INTO users (auth0_id, email, role) VALUES ($1, $2, $3) RETURNING id",
-        [auth0User.sub, auth0User.email, role]
+        "INSERT INTO users (auth0_id, email, role, is_blocked) VALUES ($1, $2, $3, $4) RETURNING id",
+        [auth0User.sub, auth0User.email, role, auth0User.blocked || false]
       );
 
       const newUserId = result.rows[0].id;
@@ -105,7 +106,7 @@ class User {
   async update(updateData) {
     try {
       // Only allow updating certain fields
-      const allowedFields = ["role", "group_id"];
+      const allowedFields = ["role", "group_id", "is_blocked"];
       const updates = [];
       const values = [];
       let paramCounter = 1;
@@ -176,6 +177,84 @@ class User {
       return result.rowCount > 0;
     } catch (error) {
       console.error("Error setting user role:", error);
+      throw error;
+    }
+  }
+
+  // Update user block status
+  static async updateBlockStatus(userId, isBlocked) {
+    try {
+      const result = await dbAsync.run(
+        "UPDATE users SET is_blocked = $1 WHERE id = $2",
+        [isBlocked, userId]
+      );
+
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error("Error updating user block status:", error);
+      throw error;
+    }
+  }
+
+  // Sync user from Auth0 data
+  static async syncFromAuth0Data(auth0User) {
+    try {
+      if (!auth0User || !auth0User.user_id) {
+        throw new Error("Invalid Auth0 user data");
+      }
+
+      // Check if user exists by Auth0 ID
+      const existingUser = await User.findByAuth0Id(auth0User.user_id);
+
+      if (existingUser) {
+        // Update existing user with Auth0 data
+        const isBlocked = auth0User.blocked === true;
+        await dbAsync.run(
+          "UPDATE users SET email = $1, is_blocked = $2, last_login = $3 WHERE id = $4",
+          [
+            auth0User.email,
+            isBlocked,
+            auth0User.last_login || new Date(),
+            existingUser.id,
+          ]
+        );
+        return true;
+      } else {
+        // Create new user from Auth0 data if it doesn't exist
+        const role = "user";
+        const isBlocked = auth0User.blocked === true;
+
+        await dbAsync.run(
+          "INSERT INTO users (auth0_id, email, role, is_blocked) VALUES ($1, $2, $3, $4)",
+          [auth0User.user_id, auth0User.email, role, isBlocked]
+        );
+        return true;
+      }
+    } catch (error) {
+      console.error("Error syncing user from Auth0 data:", error);
+      throw error;
+    }
+  }
+
+  // Bulk sync all users from Auth0
+  static async syncAllFromAuth0(auth0Users) {
+    try {
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const auth0User of auth0Users) {
+        try {
+          await User.syncFromAuth0Data(auth0User);
+          successCount++;
+        } catch (error) {
+          console.error(`Error syncing user ${auth0User.email}:`, error);
+          failCount++;
+        }
+      }
+
+      return { successCount, failCount };
+    } catch (error) {
+      console.error("Error in bulk sync from Auth0:", error);
       throw error;
     }
   }

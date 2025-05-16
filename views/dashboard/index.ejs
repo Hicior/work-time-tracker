@@ -114,10 +114,10 @@
                     const isPublicHoliday = publicHolidays[dateKey];
                     
                     let headerClass = "px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider";
-                    if (isPublicHoliday) {
-                      headerClass += " bg-purple-100";
-                    } else if (isWeekend) {
+                    if (isWeekend) {
                       headerClass += " bg-gray-100";
+                    } else if (isPublicHoliday) {
+                      headerClass += " bg-purple-100";
                     }
                     
                     let headerTitle = isPublicHoliday ? isPublicHoliday : '';
@@ -203,11 +203,11 @@
                         if (isHoliday) {
                           cellClass += " bg-red-100";
                           tooltip = 'Urlop';
+                        } else if (isWeekend) {
+                          cellClass += " bg-gray-100";
                         } else if (isPublicHoliday) {
                           cellClass += " bg-purple-100";
                           tooltip = `Święto: ${isPublicHoliday}`;
-                        } else if (isWeekend) {
-                          cellClass += " bg-gray-100";
                         } else if (hours > 0) {
                           cellClass += " bg-green-100";
                         }
@@ -218,7 +218,6 @@
                     %>
                       <td class="<%= cellClass %>" title="<%= tooltip %>" style="width: 32px !important; min-width: 32px !important; max-width: 32px !important;">
                         <%= hours > 0 ? hours : '' %>
-                        <%= isHoliday ? 'U' : '' %>
                       </td>
                     <% }); %>
                     
