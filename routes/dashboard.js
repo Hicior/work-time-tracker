@@ -16,13 +16,6 @@ const { prepareMessages } = require("../utils/messageUtils");
 // Get dashboard page with all employees' hours for a specific month
 router.get("/", async (req, res) => {
   try {
-    // Debug log user permissions
-    console.log(
-      `Dashboard access: user=${req.user.email}, role=${
-        req.user.role
-      }, hasElevatedPermissions=${req.user.hasElevatedPermissions()}`
-    );
-
     // Get the current date if no month/year specified
     const today = new Date();
     const selectedMonth = parseInt(req.query.month) || today.getMonth() + 1;

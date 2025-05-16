@@ -246,16 +246,12 @@ router.post("/", async (req, res) => {
     // --- Validation ---
     // 1. Check if date is valid (one of the last 3 working days)
     if (!validFormattedDates.includes(work_date)) {
-      console.warn(`Invalid date attempt: ${work_date} by user ${userId}`);
       return res.redirect("/work-hours?error=invalid_date");
     }
 
     // 2. Validate and convert total_hours
     const total_hours = parseFloat(total_hours_str);
     if (isNaN(total_hours) || total_hours <= 0) {
-      console.warn(
-        `Invalid hours attempt: ${total_hours_str} by user ${userId}`
-      );
       return res.redirect("/work-hours?error=invalid_hours");
     }
     // --- End Validation ---
@@ -305,18 +301,12 @@ router.post("/:id", async (req, res) => {
     // --- Validation ---
     // 1. Check if the entry's date is within the allowed range (last 3 working days)
     if (!validFormattedDates.includes(workHoursEntry.work_date)) {
-      console.warn(
-        `Update attempt on old entry (${workHoursEntry.work_date}) ID: ${id} by user ${userId}`
-      );
       return res.redirect("/work-hours?error=cannot_update_old");
     }
 
     // 2. Validate and convert total_hours
     const total_hours = parseFloat(total_hours_str);
     if (isNaN(total_hours) || total_hours <= 0) {
-      console.warn(
-        `Invalid hours update attempt: ${total_hours_str} for ID: ${id} by user ${userId}`
-      );
       return res.redirect("/work-hours?error=invalid_hours");
     }
     // --- End Validation ---
@@ -356,9 +346,6 @@ router.post("/:id/delete", async (req, res) => {
 
     // Prevent deleting older entries via manually crafting requests.
     if (!validFormattedDates.includes(workHoursEntry.work_date)) {
-      console.warn(
-        `Delete attempt on old entry (${workHoursEntry.work_date}) ID: ${id} by user ${userId}`
-      );
       return res.redirect("/work-hours?error=cannot_delete_old");
     }
 
@@ -377,17 +364,8 @@ router.get("/statistics", async (req, res) => {
   try {
     // Only allow admin and manager access
     if (!req.user.hasElevatedPermissions()) {
-      console.log(
-        "Access denied: User does not have elevated permissions",
-        req.user
-      );
       return res.redirect("/work-hours?error=unauthorized");
     }
-
-    console.log(
-      "User has elevated permissions, accessing statistics",
-      req.user.role
-    );
 
     // Get all users for filtering
     const users = await User.getAll();

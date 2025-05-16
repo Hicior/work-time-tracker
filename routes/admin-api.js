@@ -1,109 +1,79 @@
 /**
- * Admin API routes for the Work Time Tracker application.
- * Provides endpoints for admin operations including syncing users from Auth0
- * and managing user block status.
+ * Routes for administrative API endpoints in the Work Time Tracker application.
+ * Handles administrative tasks like user management and Auth0 synchronization.
+ * Requires elevated permissions (admin or manager) to access.
  */
+
 const express = require("express");
 const router = express.Router();
-const {
-  getAuth0Users,
-  toggleUserBlockedStatus,
-} = require("../utils/auth0Utils");
 const User = require("../models/User");
-const { dbAsync } = require("../db/database");
+const { auth0ManagementClient } = require("../utils/auth0Utils"); // Import Auth0 management client
 
-// Middleware to ensure user is authenticated and an admin
-const ensureAdmin = async (req, res, next) => {
-  if (!req.oidc.isAuthenticated()) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const user = await User.findByAuth0Id(req.oidc.user.sub);
-  if (!user || !user.isAdmin()) {
-    return res.status(403).json({ error: "Forbidden - Admin access required" });
-  }
-
-  next();
-};
-
-// Middleware to ensure user is authenticated and has elevated permissions (admin or manager)
-const ensureElevatedPermissions = async (req, res, next) => {
-  if (!req.oidc.isAuthenticated()) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const user = await User.findByAuth0Id(req.oidc.user.sub);
-  if (!user || !user.hasElevatedPermissions()) {
-    return res
-      .status(403)
-      .json({ error: "Forbidden - Admin or Manager access required" });
-  }
-
-  next();
-};
-
-// Apply admin middleware to admin-only routes
-router.use("/sync-users", ensureAdmin);
-router.use("/users/:id/toggle-block", ensureAdmin);
-
-// Sync users from Auth0 (admin only)
+// API endpoint to sync users from Auth0
 router.post("/sync-users", async (req, res) => {
   try {
-    // Fetch users from Auth0
-    const auth0Users = await getAuth0Users();
+    // Check if the user has admin privileges
+    if (!req.user.isAdmin()) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
-    // Sync users to database
-    const result = await User.syncAllFromAuth0(auth0Users);
+    // Get users from Auth0
+    const auth0Users = await auth0ManagementClient.getUsers();
 
-    res.json({
+    // Sync users to our database
+    const result = await User.bulkSyncFromAuth0(auth0Users);
+
+    return res.json({
       success: true,
-      message: `Synced ${result.successCount} users successfully, ${result.failCount} failed`,
-      syncedCount: result.successCount,
-      failedCount: result.failCount,
+      message: `Synchronized ${result.length} users from Auth0`,
+      users: result,
     });
   } catch (error) {
     console.error("Error syncing users from Auth0:", error);
-    res.status(500).json({
-      error: "Error syncing users from Auth0",
-      message: error.message,
-    });
+    return res.status(500).json({ error: "Failed to sync users" });
   }
 });
 
-// Toggle user blocked status - admin only
+// API endpoint to block/unblock a user
 router.post("/users/:id/toggle-block", async (req, res) => {
   try {
-    const userId = req.params.id;
+    // Check if the user has admin privileges
+    if (!req.user.isAdmin()) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
 
-    // Get user from database
-    const user = await User.findById(userId);
-    if (!user) {
+    const { id } = req.params;
+    const { blocked } = req.body;
+
+    // Get the user to update
+    const userToUpdate = await User.findById(id);
+    if (!userToUpdate) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Toggle blocked status
-    const newBlockedStatus = !user.is_blocked;
+    // Update the user's block status both in our DB and in Auth0
+    await userToUpdate.setBlockedStatus(blocked);
 
-    // Update in Auth0
-    await toggleUserBlockedStatus(user.auth0_id, newBlockedStatus);
+    // Update the user in Auth0
+    await auth0ManagementClient.updateUser({
+      id: userToUpdate.auth0_id,
+      blocked,
+    });
 
-    // Update in database
-    await User.updateBlockStatus(userId, newBlockedStatus);
-
-    res.json({
+    return res.json({
       success: true,
-      message: `User ${
-        newBlockedStatus ? "blocked" : "unblocked"
-      } successfully`,
-      userId: userId,
-      isBlocked: newBlockedStatus,
+      message: blocked
+        ? "User blocked successfully"
+        : "User unblocked successfully",
+      user: {
+        id: userToUpdate.id,
+        email: userToUpdate.email,
+        blocked: userToUpdate.blocked,
+      },
     });
   } catch (error) {
     console.error("Error toggling user block status:", error);
-    res.status(500).json({
-      error: "Error toggling user block status",
-      message: error.message,
-    });
+    return res.status(500).json({ error: "Failed to update user status" });
   }
 });
 
