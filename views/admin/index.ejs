@@ -93,7 +93,7 @@
               </td>
               <% if (dbUser.isAdmin()) { %>
               <td class="py-3 px-6 text-center">
-                <div class="flex justify-center gap-2">
+                <div class="flex justify-evenly">
                   <form
                     action="/admin/users/<%= user.id %>/role"
                     method="POST"
