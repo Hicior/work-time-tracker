@@ -158,7 +158,8 @@ class User {
 
   // Check if user has elevated permissions (admin or manager)
   hasElevatedPermissions() {
-    return this.role === "admin" || this.role === "manager";
+    const result = this.role === "admin" || this.role === "manager";
+    return result;
   }
 
   // Get all users (admin function)

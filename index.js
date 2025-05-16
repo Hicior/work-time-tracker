@@ -279,7 +279,7 @@ app.use(
   requireAdmin,
   publicHolidaysRoutes
 );
-app.use("/admin-api", requireAuth, requireAdmin, adminApiRoutes);
+app.use("/admin-api", requireAuth, requireManager, adminApiRoutes);
 
 // Create work-hours directory if it doesn't exist
 const fs = require("fs");

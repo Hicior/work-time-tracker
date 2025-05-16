@@ -372,13 +372,22 @@ router.post("/:id/delete", async (req, res) => {
   }
 });
 
-// Statistics panel for admin
+// Statistics panel for admin and managers
 router.get("/statistics", async (req, res) => {
   try {
     // Only allow admin and manager access
     if (!req.user.hasElevatedPermissions()) {
+      console.log(
+        "Access denied: User does not have elevated permissions",
+        req.user
+      );
       return res.redirect("/work-hours?error=unauthorized");
     }
+
+    console.log(
+      "User has elevated permissions, accessing statistics",
+      req.user.role
+    );
 
     // Get all users for filtering
     const users = await User.getAll();
