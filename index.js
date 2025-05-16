@@ -85,6 +85,19 @@ const requireAdmin = async (req, res, next) => {
   next();
 };
 
+// Manager role check middleware
+const requireManager = async (req, res, next) => {
+  if (!req.user || !req.user.hasElevatedPermissions()) {
+    return res.status(403).render("error", {
+      title: "Dostęp zabroniony",
+      message: "Ta sekcja wymaga uprawnień menedżera lub administratora",
+      isAuthenticated: req.oidc.isAuthenticated(),
+      user: req.oidc.user,
+    });
+  }
+  next();
+};
+
 // Routes
 app.get("/", async (req, res) => {
   let dbUser = null;
@@ -188,7 +201,7 @@ app.get("/profile", requireAuth, (req, res) => {
 });
 
 // Admin dashboard route
-app.get("/admin", requireAuth, requireAdmin, async (req, res) => {
+app.get("/admin", requireAuth, requireManager, async (req, res) => {
   try {
     const users = await User.getAll();
     const groups = await Group.findAll();
@@ -225,12 +238,23 @@ app.post(
       const { id } = req.params;
       const { role } = req.body;
 
-      if (!role || !["admin", "user"].includes(role)) {
+      if (!role || !["admin", "user", "manager"].includes(role)) {
         return res.status(400).send("Invalid role specified");
       }
 
       await User.setRole(id, role);
-      res.redirect("/admin?success=role_updated");
+
+      // Add specific message based on the new role
+      let successMessage = "role_updated";
+      if (role === "admin") {
+        successMessage = "role_changed_to_admin";
+      } else if (role === "manager") {
+        successMessage = "role_changed_to_manager";
+      } else if (role === "user") {
+        successMessage = "role_changed_to_user";
+      }
+
+      res.redirect(`/admin?success=${successMessage}`);
     } catch (error) {
       console.error("Error updating user role:", error);
       res.status(500).render("error", {

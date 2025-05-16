@@ -21,6 +21,10 @@ const messageMap = {
     role_updated: "Rola użytkownika została zaktualizowana pomyślnie.",
     users_synced: "Użytkownicy zostali zsynchronizowani z Auth0 pomyślnie.",
     user_blocked: "Status użytkownika został zaktualizowany pomyślnie.",
+    role_changed_to_manager: "Rola użytkownika została zmieniona na Menedżera.",
+    role_changed_to_admin:
+      "Rola użytkownika została zmieniona na Administratora.",
+    role_changed_to_user: "Rola użytkownika została zmieniona na Użytkownika.",
 
     // Generic messages
     added: "Pomyślnie dodano wpis.",
@@ -33,6 +37,7 @@ const messageMap = {
     failed: "Wystąpił błąd. Spróbuj ponownie.",
     not_found: "Nie znaleziono wpisu.",
     unauthorized: "Brak uprawnień do wykonania tej operacji.",
+    admin_only: "Ta operacja wymaga uprawnień administratora.",
 
     // Holiday-specific errors
     invalid_date: "Proszę wybrać prawidłową datę.",

@@ -375,8 +375,8 @@ router.post("/:id/delete", async (req, res) => {
 // Statistics panel for admin
 router.get("/statistics", async (req, res) => {
   try {
-    // Only allow admin access
-    if (!req.user.isAdmin()) {
+    // Only allow admin and manager access
+    if (!req.user.hasElevatedPermissions()) {
       return res.redirect("/work-hours?error=unauthorized");
     }
 
@@ -581,8 +581,8 @@ router.get("/statistics", async (req, res) => {
 // API endpoint to update work hours from statistics page
 router.post("/statistics/update", async (req, res) => {
   try {
-    // Only allow admin access
-    if (!req.user.isAdmin()) {
+    // Only allow admin and manager access
+    if (!req.user.hasElevatedPermissions()) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 

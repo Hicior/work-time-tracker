@@ -25,7 +25,7 @@ async function createSchema() {
         id SERIAL PRIMARY KEY,
         auth0_id TEXT NOT NULL UNIQUE,
         email TEXT NOT NULL UNIQUE,
-        role TEXT DEFAULT 'user' CHECK(role IN ('admin', 'user')),
+        role TEXT DEFAULT 'user' CHECK(role IN ('admin', 'user', 'manager')),
         group_id INTEGER,
         is_blocked BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

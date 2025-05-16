@@ -1,6 +1,6 @@
 /**
  * User model for the Work Time Tracker application.
- * Manages user data including authentication with Auth0, role management (admin/user),
+ * Manages user data including authentication with Auth0, role management (admin/user/manager),
  * and user profile operations. Provides methods for finding, creating, and updating users.
  * Handles user authentication state and permissions through role-based access control.
  */
@@ -151,6 +151,16 @@ class User {
     return this.role === "admin";
   }
 
+  // Check if user is a manager
+  isManager() {
+    return this.role === "manager";
+  }
+
+  // Check if user has elevated permissions (admin or manager)
+  hasElevatedPermissions() {
+    return this.role === "admin" || this.role === "manager";
+  }
+
   // Get all users (admin function)
   static async getAll() {
     try {
@@ -165,7 +175,7 @@ class User {
   // Set user role (admin function)
   static async setRole(userId, role) {
     try {
-      if (!["admin", "user"].includes(role)) {
+      if (!["admin", "user", "manager"].includes(role)) {
         throw new Error("Invalid role");
       }
 
