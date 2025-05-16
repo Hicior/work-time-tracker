@@ -33,6 +33,11 @@
             class="bg-blue-100 text-blue-800 py-1 px-2 rounded-full text-xs font-medium">
             Administrator
           </span>
+          <% } else if (dbUser && dbUser.isManager()) { %>
+          <span
+            class="bg-purple-100 text-purple-800 py-1 px-2 rounded-full text-xs font-medium">
+            Menedżer
+          </span>
           <% } else { %>
           <span
             class="bg-green-100 text-green-800 py-1 px-2 rounded-full text-xs font-medium">

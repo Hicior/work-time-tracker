@@ -26,10 +26,27 @@ const ensureAdmin = async (req, res, next) => {
   next();
 };
 
-// Apply middleware to all routes
-router.use(ensureAdmin);
+// Middleware to ensure user is authenticated and has elevated permissions (admin or manager)
+const ensureElevatedPermissions = async (req, res, next) => {
+  if (!req.oidc.isAuthenticated()) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
-// Sync users from Auth0
+  const user = await User.findByAuth0Id(req.oidc.user.sub);
+  if (!user || !user.hasElevatedPermissions()) {
+    return res
+      .status(403)
+      .json({ error: "Forbidden - Admin or Manager access required" });
+  }
+
+  next();
+};
+
+// Apply admin middleware to admin-only routes
+router.use("/sync-users", ensureAdmin);
+router.use("/users/:id/toggle-block", ensureAdmin);
+
+// Sync users from Auth0 (admin only)
 router.post("/sync-users", async (req, res) => {
   try {
     // Fetch users from Auth0
@@ -53,7 +70,7 @@ router.post("/sync-users", async (req, res) => {
   }
 });
 
-// Toggle user blocked status (both in database and Auth0)
+// Toggle user blocked status - admin only
 router.post("/users/:id/toggle-block", async (req, res) => {
   try {
     const userId = req.params.id;

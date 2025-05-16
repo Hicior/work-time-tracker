@@ -269,7 +269,7 @@ app.post(
 );
 
 // Register routes
-app.use("/dashboard", requireAuth, dashboardRoutes);
+app.use("/dashboard", requireAuth, requireManager, dashboardRoutes);
 app.use("/work-hours", requireAuth, workHoursRoutes);
 app.use("/holidays", requireAuth, holidaysRoutes);
 app.use("/admin/groups", requireAuth, requireAdmin, groupsRoutes);
