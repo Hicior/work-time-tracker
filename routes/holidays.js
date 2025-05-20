@@ -24,7 +24,11 @@ const generateDateRange = (startDate, endDate) => {
 
   // Add dates until we reach the end date
   while (currentDate <= lastDate) {
-    dates.push(formatDate(new Date(currentDate)));
+    const dayOfWeek = currentDate.getDay();
+    // Skip weekends (0 = Sunday, 6 = Saturday)
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      dates.push(formatDate(new Date(currentDate)));
+    }
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
@@ -191,11 +195,23 @@ router.post("/", async (req, res) => {
       return res.redirect("/holidays?error=invalid_date");
     }
 
+    // Check if the start date is a weekend
+    const startDayObj = new Date(start_date);
+    const startDayOfWeek = startDayObj.getDay();
+    if (startDayOfWeek === 0 || startDayOfWeek === 6) {
+      return res.redirect("/holidays?error=weekend_not_allowed");
+    }
+
     // If end_date is not provided, use start_date as the end date (single day)
     const actualEndDate = end_date || start_date;
 
-    // Generate all dates in the range
+    // Generate all dates in the range (weekends are automatically excluded)
     const holidayDates = generateDateRange(start_date, actualEndDate);
+
+    // Check if any dates were generated (might be empty if only weekend days)
+    if (holidayDates.length === 0) {
+      return res.redirect("/holidays?error=weekend_only");
+    }
 
     // Create holiday entries for each date in the range
     for (const holiday_date of holidayDates) {
@@ -206,7 +222,17 @@ router.post("/", async (req, res) => {
     }
 
     const daysCount = holidayDates.length;
-    const successMessage = daysCount > 1 ? `added_${daysCount}_days` : "added";
+    let successMessage = daysCount > 1 ? `added_${daysCount}_days` : "added";
+
+    // Check if date range includes weekends to inform the user
+    const startObj = new Date(start_date);
+    const endObj = new Date(actualEndDate);
+    const dayCount =
+      Math.round((endObj - startObj) / (1000 * 60 * 60 * 24)) + 1;
+
+    if (dayCount > daysCount) {
+      successMessage += "_weekends_excluded";
+    }
 
     res.redirect(`/holidays?success=${successMessage}`);
   } catch (error) {

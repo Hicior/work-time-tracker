@@ -40,7 +40,7 @@
   </div>
 
   <!-- Calendar View -->
-  <% if (workData.length > 0 && selectedUser) { %>
+  <% if (calendarData.length > 0 && selectedUser) { %>
     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
       <div class="relative">
         <h2 class="text-2xl font-semibold mb-4 text-gray-700">
@@ -59,61 +59,83 @@
         </div>
       </div>
       
-      <div class="w-fit">
+      <!-- Calendar header - Weekday names -->
+      <div class="inline-block">
+        <div class="grid grid-cols-7 gap-1 mb-1">
+          <div class="text-center font-semibold text-gray-600 w-[90px]">Pn</div>
+          <div class="text-center font-semibold text-gray-600 w-[90px]">Wt</div>
+          <div class="text-center font-semibold text-gray-600 w-[90px]">Śr</div>
+          <div class="text-center font-semibold text-gray-600 w-[90px]">Cz</div>
+          <div class="text-center font-semibold text-gray-600 w-[90px]">Pt</div>
+          <div class="text-center font-semibold text-gray-600 w-[90px]">Sb</div>
+          <div class="text-center font-semibold text-gray-600 w-[90px]">Nd</div>
+        </div>
+        
+        <!-- Calendar grid -->
         <div class="grid grid-cols-7 gap-1">
-          <!-- Day boxes -->
-          <% workData.forEach(day => { %>
-            <div class="relative min-w-[90px] w-full aspect-square rounded-lg border <%= day.hours > 0 ? 'border-blue-500 bg-blue-50' : 'border-gray-300' %> flex flex-col items-center justify-center shadow-sm hover:shadow-md transition-shadow p-1 daybox" 
-                data-date="<%= day.date %>" 
-                data-hours="<%= day.hours %>" 
-                data-user-id="<%= selectedUserId %>">
-              <!-- Day number (small, top right) -->
-              <span class="absolute top-0 right-0.5 text-sm text-gray-500"><%= day.day %></span>
-              
-              <!-- Weekday name (small, bottom left) -->
-              <span class="absolute bottom-0 left-0.5 text-xs text-gray-400 mb-0.5">
-                <% 
-                  const date = new Date(day.date);
-                  const weekdayAbbr = getDayOfWeekAbbr(day.date);
-                %>
-                <%= weekdayAbbr %>
-              </span>
-              
-              <!-- Hours (center, large) - this will be hidden when editing -->
-              <span class="text-base font-bold <%= day.hours > 0 ? 'text-blue-500' : 'text-gray-400' %> hours-display">
-                <%= day.hours > 0 ? day.hours : '-' %>
-              </span>
-              
-              <!-- Edit input (hidden by default) -->
-              <input type="number" step="0.5" min="0" class="hidden w-10 text-center bg-white border-blue-300 rounded text-blue-600 font-bold hours-input" value="<%= day.hours > 0 ? day.hours : '' %>" placeholder="0">
-              
-              <!-- Confirmation buttons (hidden by default) -->
-              <div class="hidden absolute top-0 left-0 right-0 items-center justify-center space-x-2 bg-transparent py-1 rounded-t-lg confirmation-buttons">
-                <button class="confirm-btn text-green-600 hover:text-green-800">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </button>
-                <button class="cancel-btn text-red-600 hover:text-red-800">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              <!-- Label for hours -->
-              <span class="text-xs text-gray-500 hours-label">
-                <%= day.hours === 1 ? 'h' : 'h' %>
-              </span>
-              
-              <!-- Holiday or Public Holiday information -->
+          <% 
+            // Group the days into weeks (chunks of 7)
+            for (let i = 0; i < calendarData.length; i++) {
+              const day = calendarData[i];
+              const isCurrentMonth = day.isCurrentMonth;
+          %>
+            <div class="relative aspect-square w-[90px] rounded-lg border <%= 
+              isCurrentMonth ?
+                (day.hours > 0 ? 'border-blue-500 bg-blue-50' : 'border-gray-300') :
+                'border-gray-200 bg-gray-100'
+              %> flex flex-col items-center justify-center shadow-sm hover:shadow-md transition-shadow p-1 daybox <%= !isCurrentMonth ? 'other-month' : '' %>" 
+              data-date="<%= day.date %>" 
+              data-hours="<%= day.hours %>" 
+              data-user-id="<%= selectedUserId %>"
+              <%= !isCurrentMonth ? 'data-disabled="true"' : '' %>>
+            
+            <!-- Day number (small, top right) -->
+            <span class="absolute top-0 right-0.5 text-sm <%= isCurrentMonth ? 'text-gray-500' : 'text-gray-400' %>"><%= day.day %></span>
+            
+            <!-- Hours (center, large) - this will be hidden when editing -->
+            <span class="text-base font-bold <%= 
+              isCurrentMonth ?
+                (day.hours > 0 ? 'text-blue-500' : 'text-gray-400') :
+                'text-gray-300'
+              %> hours-display">
+              <%= isCurrentMonth && day.hours > 0 ? day.hours : '-' %>
+            </span>
+            
+            <!-- Edit input (hidden by default) -->
+            <input type="number" step="0.5" min="0" class="hidden w-10 text-center bg-white border-blue-300 rounded text-blue-600 font-bold hours-input" value="<%= day.hours > 0 ? day.hours : '' %>" placeholder="0">
+            
+            <!-- Confirmation buttons (hidden by default) -->
+            <div class="hidden absolute top-0 left-0 right-0 items-center justify-center space-x-2 bg-transparent py-1 rounded-t-lg confirmation-buttons">
+              <button class="confirm-btn text-green-600 hover:text-green-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </button>
+              <button class="cancel-btn text-red-600 hover:text-red-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Label for hours -->
+            <span class="text-xs <%= isCurrentMonth ? 'text-gray-500' : 'text-gray-400' %> hours-label">h</span>
+            
+            <!-- Day of week (small, bottom left) -->
+            <span class="absolute bottom-0 left-0.5 text-xs font-extralight <%= isCurrentMonth ? 'text-gray-500' : 'text-gray-400' %> mb-0.5">
+              <%= getDayOfWeekAbbr(day.date).toLowerCase() %>
+            </span>
+            
+            <!-- Holiday or Public Holiday information -->
+            <% if (isCurrentMonth) { %>
               <% if (day.isPublicHoliday) { %>
                 <span class="text-xs text-blue-600 mt-1 holiday-label">święto</span>
               <% } else if (day.isHoliday) { %>
                 <span class="text-xs text-green-600 mt-1 holiday-label">urlop</span>
               <% } %>
-            </div>
-          <% }); %>
+            <% } %>
+          </div>
+        <% } %>
         </div>
       </div>
       
@@ -188,6 +210,11 @@
     
     dayboxes.forEach(box => {
       box.addEventListener('click', function() {
+        // Don't allow editing days from other months
+        if (box.getAttribute('data-disabled') === 'true') {
+          return;
+        }
+        
         // Don't allow multiple editing at once - close any open editors
         document.querySelectorAll('.daybox.editing').forEach(openBox => {
           if (openBox !== box) {
@@ -355,7 +382,7 @@
     function updateMonthlyTotals() {
       // Recalculate work hours total
       let workHoursTotal = 0;
-      dayboxes.forEach(box => {
+      document.querySelectorAll('.daybox:not(.other-month)').forEach(box => {
         workHoursTotal += parseFloat(box.dataset.hours) || 0;
       });
       

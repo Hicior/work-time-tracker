@@ -389,6 +389,7 @@ router.get("/statistics", async (req, res) => {
     const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
 
     let workData = [];
+    let calendarData = []; // New array for calendar data including days from adjacent months
     let totalCombinedHours = 0;
 
     if (selectedUserId) {
@@ -439,7 +440,7 @@ router.get("/statistics", async (req, res) => {
       // Standard workday hours
       const standardWorkHours = 8;
 
-      // Prepare daily work hours data
+      // Prepare daily work hours data for the current month
       workData = Array.from({ length: daysInMonth }, (_, i) => {
         const day = i + 1;
         const dateStr = `${selectedYear}-${formattedMonth}-${day
@@ -458,11 +459,83 @@ router.get("/statistics", async (req, res) => {
         return {
           day,
           date: dateStr,
+          month: selectedMonth,
+          year: selectedYear,
           hours: entry ? entry.total_hours : 0,
           isHoliday,
           isPublicHoliday,
+          isCurrentMonth: true,
         };
       });
+
+      // Calculate the first day of the month (0-6, where 0 is Sunday)
+      const firstDayOfMonth = new Date(
+        selectedYear,
+        selectedMonth - 1,
+        1
+      ).getDay();
+
+      // Convert to Monday-based index (0-6, where 0 is Monday)
+      const firstDayMondayBased = (firstDayOfMonth + 6) % 7;
+
+      // Calculate days needed from previous month to complete the first week
+      const daysFromPrevMonth = firstDayMondayBased;
+
+      // Calculate the previous month and year
+      const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
+      const prevYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
+      const daysInPrevMonth = new Date(prevYear, prevMonth, 0).getDate();
+
+      // Add days from previous month
+      const formattedPrevMonth = prevMonth.toString().padStart(2, "0");
+      for (let i = 0; i < daysFromPrevMonth; i++) {
+        const day = daysInPrevMonth - daysFromPrevMonth + i + 1;
+        const dateStr = `${prevYear}-${formattedPrevMonth}-${day
+          .toString()
+          .padStart(2, "0")}`;
+
+        calendarData.push({
+          day,
+          date: dateStr,
+          month: prevMonth,
+          year: prevYear,
+          hours: 0, // We're not loading work hours for adjacent months
+          isHoliday: false,
+          isPublicHoliday: false,
+          isCurrentMonth: false,
+        });
+      }
+
+      // Add current month days
+      calendarData = [...calendarData, ...workData];
+
+      // Calculate days needed from next month to complete the last week
+      const totalDaysDisplayed = calendarData.length;
+      const daysFromNextMonth = (7 - (totalDaysDisplayed % 7)) % 7;
+
+      // Calculate the next month and year
+      const nextMonth = selectedMonth === 12 ? 1 : selectedMonth + 1;
+      const nextYear = selectedMonth === 12 ? selectedYear + 1 : selectedYear;
+
+      // Add days from next month
+      const formattedNextMonth = nextMonth.toString().padStart(2, "0");
+      for (let i = 0; i < daysFromNextMonth; i++) {
+        const day = i + 1;
+        const dateStr = `${nextYear}-${formattedNextMonth}-${day
+          .toString()
+          .padStart(2, "0")}`;
+
+        calendarData.push({
+          day,
+          date: dateStr,
+          month: nextMonth,
+          year: nextYear,
+          hours: 0, // We're not loading work hours for adjacent months
+          isHoliday: false,
+          isPublicHoliday: false,
+          isCurrentMonth: false,
+        });
+      }
 
       // Calculate total combined hours exactly like dashboard does
       // First, calculate total work hours
@@ -521,6 +594,7 @@ router.get("/statistics", async (req, res) => {
           { value: 12, name: "Grudzień" },
         ],
         workData,
+        calendarData, // Pass the new calendar data to the view
         selectedUser,
         getDayOfWeekAbbr, // Pass the function to the view
         isAuthenticated: req.oidc.isAuthenticated(),
@@ -552,6 +626,7 @@ router.get("/statistics", async (req, res) => {
           { value: 12, name: "Grudzień" },
         ],
         workData: [],
+        calendarData: [], // Pass empty calendar data
         getDayOfWeekAbbr, // Pass the function to the view
         isAuthenticated: req.oidc.isAuthenticated(),
         user: req.oidc.user,
