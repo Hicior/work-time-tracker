@@ -42,14 +42,34 @@
     </div>
   </div>
 
+  <% 
+  // Calculate total number of active employees across all groups
+  let totalActiveEmployees = 0;
+  groupedEmployees.forEach(group => {
+    const activeEmployees = group.employees.filter(emp => 
+      emp.holidays.length > 0 || emp.totalHours > 0
+    );
+    totalActiveEmployees += activeEmployees.length;
+  });
+  %>
+  
   <!-- Legend -->
   <div class="mb-6 bg-white p-5 rounded-lg shadow border border-gray-100">
-    <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      Legenda:
-    </h3>
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-3">
+      <h3 class="text-lg font-bold text-gray-800 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Legenda:
+      </h3>
+      <div class="mt-2 md:mt-0 text-sm font-medium text-gray-700 bg-blue-50 rounded-lg px-3 py-1.5 border border-blue-100 flex items-center" 
+           title="Liczba osób pracujących w danym miesiącu">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <span class="font-bold text-blue-600"><%= totalActiveEmployees %></span>
+      </div>
+    </div>
     <div class="flex flex-wrap gap-4 justify-start">
       <div class="flex items-center p-2 rounded">
         <div class="w-6 h-6 bg-green-100 mr-2 rounded border border-green-200"></div>
@@ -76,6 +96,12 @@
       <% groupedEmployees.forEach((group, groupIndex) => { %>
         <!-- Each group in its own card -->
         <div class="mb-0 shadow border-b border-gray-200 sm:rounded-lg">
+          <% 
+            // Filter employees to show only those with holidays or work hours
+            const filteredEmployees = group.employees.filter(emp => 
+              emp.holidays.length > 0 || emp.totalHours > 0
+            );
+          %>
           <!-- Group header -->
           <div class="bg-gray-100 border-b border-gray-300 px-6 py-3 text-left text-sm font-medium">
             <div class="flex items-center justify-center">
@@ -84,7 +110,7 @@
               </svg>
               <span class="text-base font-semibold text-gray-900"><%= group.name %></span>
               <span class="ml-2 bg-gray-200 text-gray-700 rounded-full px-2 py-1 text-xs">
-                <%= group.employees.length %> <%= group.employees.length === 1 ? 'pracownik' : 'pracowników' %>
+                <%= filteredEmployees.length %> <%= filteredEmployees.length === 1 ? 'pracownik' : 'pracowników' %>
               </span>
             </div>
           </div>
@@ -140,14 +166,14 @@
             </thead>
             
             <tbody class="bg-white divide-y divide-gray-200">
-              <% if (group.employees.length === 0) { %>
+                              <% if (filteredEmployees.length === 0) { %>
                 <tr>
                   <td colspan="<%= daysInMonth.length + 3 %>" class="px-2 py-3 text-center text-sm text-gray-500">
-                    Brak pracowników w tej grupie
+                    Brak aktywnych pracowników w tej grupie
                   </td>
                 </tr>
               <% } else { %>
-                <% group.employees.forEach((employee, employeeIndex) => { %>
+                <% filteredEmployees.forEach((employee, employeeIndex) => { %>
                   <% 
                     // Count weekday holidays and public holidays (Mon-Fri only)
                     let weekdayHolidaysCount = 0;
@@ -183,8 +209,8 @@
                   %>
                   <tr class="<%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %>">
                     <!-- Employee name (sticky) -->
-                    <td class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10" style="width: 140px !important; min-width: 140px !important; max-width: 140px !important;" title="<%= employee.user.email %>">
-                      <%= employee.user.email.split('@')[0] %>
+                    <td class="px-2 py-2 whitespace-nowrap truncate max-w-[140px] text-sm font-medium text-gray-900 sticky left-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10" style="width: 140px !important; min-width: 140px !important; max-width: 140px !important;" title="<%= employee.user.name %>">
+                      <%= employee.user.name || employee.user.email.split('@')[0] %>
                     </td>
                     
                     <!-- Hours for each day -->

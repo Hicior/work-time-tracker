@@ -77,4 +77,58 @@ router.post("/users/:id/toggle-block", async (req, res) => {
   }
 });
 
+// API endpoint to update a user's name
+router.post("/users/:id/update-name", async (req, res) => {
+  try {
+    // Check if the user has admin privileges
+    if (!req.user.isAdmin()) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const { id } = req.params;
+    const { name } = req.body;
+
+    if (!name || name.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Imię i nazwisko nie może być puste",
+      });
+    }
+
+    // Get the user to update
+    const userToUpdate = await User.findById(id);
+    if (!userToUpdate) {
+      return res.status(404).json({
+        success: false,
+        message: "Nie znaleziono użytkownika",
+      });
+    }
+
+    // Update the user's name
+    const updated = await userToUpdate.update({ name: name.trim() });
+
+    if (!updated) {
+      return res.status(500).json({
+        success: false,
+        message: "Nie udało się zaktualizować imienia i nazwiska",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Imię i nazwisko zaktualizowane pomyślnie",
+      user: {
+        id: userToUpdate.id,
+        name: userToUpdate.name,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating user name:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Wystąpił błąd podczas aktualizacji",
+    });
+  }
+});
+
 module.exports = router;

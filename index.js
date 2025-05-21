@@ -149,9 +149,9 @@ app.get("/", async (req, res) => {
       // Calculate stats
       const hoursPerDay = 8;
       const workDaysInMonth = getWeekdaysInMonth(currentYear, currentMonth);
-      // Subtract public holidays from required monthly hours
+      // Subtract all public holidays from required monthly hours
       const requiredMonthlyHours =
-        (workDaysInMonth - publicHolidaysOnWorkdays.length) * hoursPerDay;
+        (workDaysInMonth - publicHolidays.length) * hoursPerDay;
 
       const totalHolidayHours = holidayCount * hoursPerDay;
       const publicHolidayHours = publicHolidaysOnWorkdays.length * hoursPerDay;

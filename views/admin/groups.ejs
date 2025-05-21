@@ -127,23 +127,26 @@
     <div class="p-6">
       <form action="/admin/groups/assign-user" method="POST">
         <div class="mb-4">
-          <label for="userId" class="block text-gray-700 text-sm font-bold mb-2"
+          <label
+            for="userSearch"
+            class="block text-gray-700 text-sm font-bold mb-2"
             >Użytkownik</label
           >
-          <select
-            id="userId"
-            name="userId"
-            required
-            class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            <option value="">Wybierz użytkownika</option>
-            <% users.forEach(user => { %>
-            <option value="<%= user.id %>">
-              <%= user.email %> <% if (user.group_id) { %> (Obecna grupa: <%=
-              groups.find(g => g.id === user.group_id)?.name || 'Nieznana' %>)
-              <% } else { %> (Brak grupy) <% } %>
-            </option>
-            <% }) %>
-          </select>
+          <div class="relative">
+            <input
+              type="text"
+              id="userSearch"
+              placeholder="Wyszukaj użytkownika..."
+              class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+            <input type="hidden" id="userId" name="userId" required />
+
+            <!-- Dropdown results container -->
+            <div
+              id="userResults"
+              class="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg max-h-96 overflow-y-scroll scrollbar-thin hidden border border-gray-200">
+              <!-- Results will be populated here via JavaScript -->
+            </div>
+          </div>
         </div>
         <div class="mb-4">
           <label
@@ -220,6 +223,101 @@
   function closeEditModal() {
     document.getElementById("editGroupModal").classList.add("hidden");
   }
+
+  // User search functionality
+  document.addEventListener("DOMContentLoaded", () => {
+    const userSearch = document.getElementById('userSearch');
+    const userIdInput = document.getElementById('userId');
+    const userResults = document.getElementById('userResults');
+
+    // User data from server
+    const users = [
+      <% users.forEach(user => { %>
+        {
+          id: <%= user.id %>,
+          name: "<%= user.name || user.email.split('@')[0] %>",
+          email: "<%= user.email %>",
+          group: "<%= user.group_id ? (groups.find(g => g.id === user.group_id)?.name || 'Nieznana') : 'Brak grupy' %>"
+        },
+      <% }); %>
+    ];
+
+    // Filter users based on search input
+    function filterUsers(query) {
+      query = query.toLowerCase();
+      return users.filter(user =>
+        user.name.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query)
+      );
+    }
+
+    // Render user results
+    function renderUserResults(filteredUsers) {
+      userResults.innerHTML = '';
+
+      // Create container for results with padding
+      const resultsContainer = document.createElement('div');
+      resultsContainer.className = 'py-2 px-1';
+
+      if (filteredUsers.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'px-4 py-2 text-sm text-gray-500';
+        noResults.textContent = 'Nie znaleziono użytkowników';
+        resultsContainer.appendChild(noResults);
+      } else {
+        filteredUsers.forEach(user => {
+          const userItem = document.createElement('div');
+          userItem.className = 'px-4 py-2.5 text-sm cursor-pointer hover:bg-gray-50 transition-colors duration-150 rounded mx-2 my-1 border-b border-gray-100 font-medium';
+          userItem.dataset.id = user.id;
+
+          // Create name display
+          const nameSpan = document.createElement('div');
+          nameSpan.className = 'font-medium';
+          nameSpan.textContent = user.name;
+
+          // Create email and group display
+          const infoSpan = document.createElement('div');
+          infoSpan.className = 'text-xs text-gray-500';
+          infoSpan.textContent = `${user.email} (${user.group})`;
+
+          userItem.appendChild(nameSpan);
+          userItem.appendChild(infoSpan);
+
+          userItem.addEventListener('click', () => {
+            userIdInput.value = user.id;
+            userSearch.value = user.name;
+            userResults.classList.add('hidden');
+          });
+
+          resultsContainer.appendChild(userItem);
+        });
+      }
+
+      // Add the container to the dropdown
+      userResults.appendChild(resultsContainer);
+    }
+
+    // Handle search input
+    userSearch.addEventListener('input', () => {
+      const query = userSearch.value.trim();
+      const filteredUsers = filterUsers(query);
+      renderUserResults(filteredUsers);
+      userResults.classList.remove('hidden');
+    });
+
+    // Show all users on focus
+    userSearch.addEventListener('focus', () => {
+      renderUserResults(users);
+      userResults.classList.remove('hidden');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!userSearch.contains(e.target) && !userResults.contains(e.target)) {
+        userResults.classList.add('hidden');
+      }
+    });
+  });
 
   // Notification and scroll handling
   document.addEventListener("DOMContentLoaded", () => {

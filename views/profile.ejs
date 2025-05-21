@@ -17,11 +17,11 @@
           <%= user.email %>
         </dd>
       </div>
-      <% if (user.nickname) { %>
+      <% if ((dbUser && dbUser.name) || user.nickname) { %>
       <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
         <dt class="text-sm font-medium text-gray-500">Nazwa użytkownika</dt>
         <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-          <%= user.nickname %>
+          <%= (dbUser && dbUser.name) ? dbUser.name : user.nickname %>
         </dd>
       </div>
       <% } %>

@@ -11,6 +11,7 @@ class User {
     this.id = data.id;
     this.auth0_id = data.auth0_id;
     this.email = data.email;
+    this.name = data.name;
     this.role = data.role;
     this.group_id = data.group_id;
     this.is_blocked = data.is_blocked;
@@ -106,7 +107,7 @@ class User {
   async update(updateData) {
     try {
       // Only allow updating certain fields
-      const allowedFields = ["role", "group_id", "is_blocked"];
+      const allowedFields = ["role", "group_id", "is_blocked", "name"];
       const updates = [];
       const values = [];
       let paramCounter = 1;
