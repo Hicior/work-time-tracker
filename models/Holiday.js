@@ -43,6 +43,30 @@ class Holiday {
     }
   }
 
+  // Get holidays for all users in a date range, including user information
+  static async findAllByDateRange(startDate, endDate) {
+    try {
+      const holidaysWithUserInfo = await dbAsync.all(
+        `SELECT h.id, h.user_id, h.holiday_date, h.created_at, 
+                u.name, u.email 
+         FROM holidays h
+         JOIN users u ON h.user_id = u.id
+         WHERE h.holiday_date BETWEEN $1 AND $2
+         ORDER BY h.holiday_date, u.name`,
+        [startDate, endDate]
+      );
+
+      return holidaysWithUserInfo || [];
+    } catch (error) {
+      console.error(
+        "Error finding holidays for all users by date range:",
+        error
+      );
+      // Return empty array instead of throwing to prevent page crash
+      return [];
+    }
+  }
+
   // Get all holidays for a user
   static async findAllByUser(userId) {
     try {

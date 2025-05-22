@@ -9,10 +9,13 @@ const router = express.Router();
 const Holiday = require("../models/Holiday");
 const PublicHoliday = require("../models/PublicHoliday");
 const WorkHours = require("../models/WorkHours");
+const User = require("../models/User");
 const {
   getWeekdaysInMonth,
   formatDate,
   formatDateForDisplay,
+  getDayOfWeekName,
+  formatDayAndMonthGenitive,
 } = require("../utils/dateUtils");
 const { prepareMessages } = require("../utils/messageUtils");
 
@@ -360,6 +363,89 @@ router.get("/future", async (req, res) => {
       user: req.oidc.user,
       dbUser: req.user, // Pass database user
       messages: { error: "Wystąpił błąd podczas ładowania danych" },
+    });
+  }
+});
+
+// Display all employee holidays for the current month
+router.get("/employees", async (req, res) => {
+  try {
+    const { year, month, firstDay, lastDay } = getCurrentMonthInfo();
+
+    // Get all users
+    const allUsers = await User.getAll();
+
+    // Get all public holidays for reference
+    const publicHolidays = await PublicHoliday.findByMonthAndYear(month, year);
+
+    // Initialize an empty object to hold holidays grouped by date
+    const holidaysByDate = {};
+
+    // Process each user
+    for (const user of allUsers) {
+      // Get holidays for this user for the current month
+      const userHolidays = await Holiday.findByUserAndDateRange(
+        user.id,
+        firstDay,
+        lastDay
+      );
+
+      // Process each holiday for this user
+      for (const holiday of userHolidays) {
+        const dateStr = formatDate(holiday.holiday_date);
+        // Use the new formatter for the main date display
+        const displayDate = formatDayAndMonthGenitive(holiday.holiday_date);
+        const dayOfWeek = getDayOfWeekName(holiday.holiday_date);
+
+        // Create entry for this date if it doesn't exist
+        if (!holidaysByDate[dateStr]) {
+          holidaysByDate[dateStr] = {
+            date: displayDate, // Use newly formatted date
+            day_of_week: dayOfWeek,
+            employees: [],
+          };
+        }
+
+        // Add this user to the employees for this date
+        holidaysByDate[dateStr].employees.push({
+          id: user.id,
+          name: user.name || user.email.split("@")[0],
+          email: user.email,
+        });
+      }
+    }
+
+    res.render("holidays/employees", {
+      title: "Urlopy pracowników",
+      currentPage: "holidays",
+      month,
+      year,
+      holidaysByDate,
+      publicHolidays,
+      users: allUsers,
+      isAuthenticated: req.oidc.isAuthenticated(),
+      user: req.oidc.user,
+      dbUser: req.user,
+      messages: prepareMessages(req.query),
+      formatDateForDisplay, // Keep this for public holidays if needed elsewhere
+      formatDayAndMonthGenitive, // Pass the new function
+    });
+  } catch (error) {
+    console.error("Error loading employee holidays:", error);
+    res.render("holidays/employees", {
+      title: "Urlopy pracowników",
+      currentPage: "holidays",
+      month: new Date().getMonth() + 1,
+      year: new Date().getFullYear(),
+      holidaysByDate: {},
+      publicHolidays: [],
+      users: [],
+      isAuthenticated: req.oidc.isAuthenticated(),
+      user: req.oidc.user,
+      dbUser: req.user,
+      messages: { error: "Wystąpił błąd podczas ładowania danych" },
+      formatDateForDisplay: () => "", // Dummy function
+      formatDayAndMonthGenitive: () => "", // Dummy function
     });
   }
 });

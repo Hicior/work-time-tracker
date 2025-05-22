@@ -156,6 +156,49 @@ function formatDateTimeForDisplay(dateValue, locale = "pl-PL") {
   }
 }
 
+/**
+ * Format date for display as "D MonthNameGenitive" (e.g., "2 Maja").
+ * @param {Date|string} dateValue - The date value to format.
+ * @returns {string} Formatted date string (e.g., "2 Maja").
+ */
+function formatDayAndMonthGenitive(dateValue) {
+  if (!dateValue) return "";
+
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+      console.error(
+        "Invalid date value for formatDayAndMonthGenitive:",
+        dateValue
+      );
+      return String(dateValue);
+    }
+
+    const day = date.getDate();
+    const monthIndex = date.getMonth(); // 0-indexed
+
+    const monthNamesGenitive = [
+      "stycznia",
+      "lutego",
+      "marca",
+      "kwietnia",
+      "maja",
+      "czerwca",
+      "lipca",
+      "sierpnia",
+      "września",
+      "października",
+      "listopada",
+      "grudnia",
+    ];
+
+    return `${day} ${monthNamesGenitive[monthIndex]}`;
+  } catch (e) {
+    console.error("Error formatting day and month genitive:", e, dateValue);
+    return String(dateValue);
+  }
+}
+
 module.exports = {
   getWeekdaysInMonth,
   getDayOfWeekName,
@@ -163,4 +206,5 @@ module.exports = {
   formatDate,
   formatDateForDisplay,
   formatDateTimeForDisplay,
+  formatDayAndMonthGenitive,
 };
