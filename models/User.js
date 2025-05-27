@@ -221,6 +221,7 @@ class User {
       if (existingUser) {
         // Update existing user with Auth0 data
         const isBlocked = auth0User.blocked === true;
+
         await dbAsync.run(
           "UPDATE users SET email = $1, is_blocked = $2, last_login = $3 WHERE id = $4",
           [

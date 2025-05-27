@@ -255,7 +255,12 @@
           const result = await response.json();
 
           if (result.success) {
-            window.location.href = "/admin?success=users_synced";
+            // Show detailed sync results
+            const message = `Synchronizacja zakończona!\n\nPomyślnie zsynchronizowano: ${result.result.successCount} użytkowników\nBłędy: ${result.result.failCount} użytkowników\n\nStrona zostanie odświeżona aby pokazać aktualne dane.`;
+            alert(message);
+
+            // Reload the page to show updated data
+            window.location.reload();
           } else {
             alert("Błąd: " + result.message);
             syncUsersBtn.disabled = false;
@@ -382,30 +387,78 @@
     blockBtns.forEach((btn) => {
       btn.addEventListener("click", async function () {
         const userId = this.getAttribute("data-user-id");
+        const row = this.closest("tr");
+        const statusElement = row.querySelector("td:nth-child(3) span");
+
+        // Determine current blocked status from the UI
+        const isCurrentlyBlocked =
+          statusElement.textContent.includes("Zablokowany");
+        const newBlockedStatus = !isCurrentlyBlocked;
+
+        // Confirm the action
+        const action = newBlockedStatus ? "zablokować" : "odblokować";
+        const userName = row.querySelector(".name-display").textContent;
+
+        if (
+          !confirm(`Czy na pewno chcesz ${action} użytkownika "${userName}"?`)
+        ) {
+          return;
+        }
 
         try {
           btn.disabled = true;
+          btn.textContent = newBlockedStatus
+            ? "Blokowanie..."
+            : "Odblokowywanie...";
 
           const response = await fetch(
             `/admin-api/users/${userId}/toggle-block`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ blocked: newBlockedStatus }),
             }
           );
 
           const result = await response.json();
 
           if (result.success) {
-            window.location.href = "/admin?success=user_blocked";
+            // Update the UI immediately
+            if (newBlockedStatus) {
+              statusElement.className =
+                "bg-red-200 text-red-800 py-1 px-3 rounded-full text-xs";
+              statusElement.textContent = "Zablokowany";
+              btn.className =
+                "toggle-block-btn inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-green-500 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500";
+              btn.textContent = "Odblokuj";
+            } else {
+              statusElement.className =
+                "bg-green-200 text-green-800 py-1 px-3 rounded-full text-xs";
+              statusElement.textContent = "Aktywny";
+              btn.className =
+                "toggle-block-btn inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-500 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500";
+              btn.textContent = "Zablokuj";
+            }
+
+            btn.disabled = false;
+
+            // Show success notification if available
+            if (typeof window.showNotification === "function") {
+              const message = newBlockedStatus
+                ? "Użytkownik został zablokowany."
+                : "Użytkownik został odblokowany.";
+              window.showNotification(message, "success");
+            }
           } else {
             alert("Błąd: " + result.message);
             btn.disabled = false;
+            btn.textContent = isCurrentlyBlocked ? "Odblokuj" : "Zablokuj";
           }
         } catch (error) {
           console.error("Error toggling user block status:", error);
           alert("Wystąpił błąd podczas zmiany statusu użytkownika.");
           btn.disabled = false;
+          btn.textContent = isCurrentlyBlocked ? "Odblokuj" : "Zablokuj";
         }
       });
     });

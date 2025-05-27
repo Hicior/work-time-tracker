@@ -7,7 +7,10 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
-const { auth0ManagementClient } = require("../utils/auth0Utils"); // Import Auth0 management client
+const {
+  getAuth0Users,
+  toggleUserBlockedStatus,
+} = require("../utils/auth0Utils"); // Import Auth0 utilities
 
 // API endpoint to sync users from Auth0
 router.post("/sync-users", async (req, res) => {
@@ -18,15 +21,15 @@ router.post("/sync-users", async (req, res) => {
     }
 
     // Get users from Auth0
-    const auth0Users = await auth0ManagementClient.getUsers();
+    const auth0Users = await getAuth0Users();
 
     // Sync users to our database
-    const result = await User.bulkSyncFromAuth0(auth0Users);
+    const result = await User.syncAllFromAuth0(auth0Users);
 
     return res.json({
       success: true,
-      message: `Synchronized ${result.length} users from Auth0`,
-      users: result,
+      message: `Synchronized ${result.successCount} users from Auth0 (${result.failCount} failed)`,
+      result: result,
     });
   } catch (error) {
     console.error("Error syncing users from Auth0:", error);
@@ -51,14 +54,21 @@ router.post("/users/:id/toggle-block", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Update the user's block status both in our DB and in Auth0
-    await userToUpdate.setBlockedStatus(blocked);
+    // Check if user has auth0_id
+    if (!userToUpdate.auth0_id) {
+      return res.status(400).json({
+        error: "User does not have Auth0 ID - cannot update Auth0 status",
+      });
+    }
+
+    // Update the user's block status in our database
+    await User.updateBlockStatus(userToUpdate.id, blocked);
 
     // Update the user in Auth0
-    await auth0ManagementClient.updateUser({
-      id: userToUpdate.auth0_id,
-      blocked,
-    });
+    await toggleUserBlockedStatus(userToUpdate.auth0_id, blocked);
+
+    // Get updated user data
+    const updatedUser = await User.findById(id);
 
     return res.json({
       success: true,
@@ -66,9 +76,9 @@ router.post("/users/:id/toggle-block", async (req, res) => {
         ? "User blocked successfully"
         : "User unblocked successfully",
       user: {
-        id: userToUpdate.id,
-        email: userToUpdate.email,
-        blocked: userToUpdate.blocked,
+        id: updatedUser.id,
+        email: updatedUser.email,
+        blocked: updatedUser.is_blocked,
       },
     });
   } catch (error) {

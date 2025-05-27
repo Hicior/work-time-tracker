@@ -59,7 +59,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span>Kliknij w dzień, aby edytować godziny</span>
+          <span>Kliknij w dzień, aby edytować godziny (szare dni są nieedytowalne)</span>
         </div>
       </div>
       
@@ -87,7 +87,9 @@
               isCurrentMonth ?
                 (day.hours > 0 ? 'border-blue-500 bg-blue-50' : 'border-gray-300') :
                 'border-gray-200 bg-gray-100'
-              %> flex flex-col items-center justify-center shadow-sm hover:shadow-md transition-shadow p-1 daybox <%= !isCurrentMonth ? 'other-month' : '' %>" 
+              %> flex flex-col items-center justify-center shadow-sm <%=
+              isCurrentMonth ? 'hover:shadow-md cursor-pointer' : 'cursor-not-allowed opacity-60'
+              %> transition-shadow p-1 daybox <%= !isCurrentMonth ? 'other-month' : '' %>" 
               data-date="<%= day.date %>" 
               data-hours="<%= day.hours %>" 
               data-user-id="<%= selectedUserId %>"
@@ -106,16 +108,16 @@
             </span>
             
             <!-- Edit input (hidden by default) -->
-            <input type="number" step="0.5" min="0" class="hidden w-10 text-center bg-white border-blue-300 rounded text-blue-600 font-bold hours-input" value="<%= day.hours > 0 ? day.hours : '' %>" placeholder="0">
+            <input type="number" step="0.5" min="0" class="hidden w-10 text-center bg-white border-blue-300 rounded text-blue-600 font-bold hours-input" value="<%= day.hours > 0 ? day.hours : '' %>" placeholder="0" <%= !isCurrentMonth ? 'disabled' : '' %>>
             
             <!-- Confirmation buttons (hidden by default) -->
             <div class="hidden absolute top-0 left-0 right-0 items-center justify-center space-x-2 bg-transparent py-1 rounded-t-lg confirmation-buttons">
-              <button class="confirm-btn text-green-600 hover:text-green-800">
+              <button class="confirm-btn text-green-600 hover:text-green-800" <%= !isCurrentMonth ? 'disabled' : '' %>>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
               </button>
-              <button class="cancel-btn text-red-600 hover:text-red-800">
+              <button class="cancel-btn text-red-600 hover:text-red-800" <%= !isCurrentMonth ? 'disabled' : '' %>>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -306,9 +308,11 @@
     });
     
     dayboxes.forEach(box => {
-      box.addEventListener('click', function() {
+      box.addEventListener('click', function(e) {
         // Don't allow editing days from other months
         if (box.getAttribute('data-disabled') === 'true') {
+          e.preventDefault();
+          e.stopPropagation();
           return;
         }
         
@@ -324,6 +328,33 @@
           startEditing(box);
         }
       });
+      
+      // Prevent any interaction with disabled dayboxes
+      if (box.getAttribute('data-disabled') === 'true') {
+        box.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+        
+        box.addEventListener('mouseup', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+        
+        // Disable all input elements within disabled dayboxes
+        const input = box.querySelector('.hours-input');
+        if (input) {
+          input.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+          });
+          input.addEventListener('focus', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            input.blur();
+          });
+        }
+      }
       
       // Setup confirmation buttons
       const confirmBtn = box.querySelector('.confirm-btn');
@@ -357,8 +388,12 @@
       
       // Hide hours display, show input
       box.querySelector('.hours-display').classList.add('hidden');
-      box.querySelector('.hours-input').classList.remove('hidden');
-      box.querySelector('.hours-input').focus();
+      const input = box.querySelector('.hours-input');
+      input.classList.remove('hidden');
+      input.focus();
+      
+      // Select all text in the input for easy editing
+      input.select();
       
       // Show confirmation buttons
       box.querySelector('.confirmation-buttons').classList.remove('hidden');
@@ -489,10 +524,6 @@
         workHoursTotalElement.textContent = Math.round(workHoursTotal * 100) / 100;
       }
       
-      // Note: We'd need to do a page refresh to get the true updated combined total,
-      // since that calculation includes holidays which we don't have full data for in the frontend
     }
   });
 </script>
-
-<!-- Remove the duplicate style for number inputs since it's now in the notification partial --> 

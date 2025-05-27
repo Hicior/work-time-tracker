@@ -7,10 +7,12 @@ const axios = require("axios");
 
 // Auth0 Configuration
 const auth0Config = {
-  domain: process.env.AUTH0_MANAGEMENT_DOMAIN,
+  domain: process.env.AUTH0_MANAGEMENT_DOMAIN || process.env.AUTH0_DOMAIN,
   clientId: process.env.AUTH0_MANAGEMENT_CLIENT_ID,
   clientSecret: process.env.AUTH0_MANAGEMENT_CLIENT_SECRET,
-  audience: process.env.AUTH0_MANAGEMENT_AUDIENCE,
+  audience:
+    process.env.AUTH0_MANAGEMENT_AUDIENCE ||
+    `https://${process.env.AUTH0_DOMAIN}/api/v2/`,
 };
 
 // Token cache
@@ -25,6 +27,22 @@ async function getManagementApiToken() {
   // Check if we have a valid token already
   if (managementApiToken && tokenExpiry && Date.now() < tokenExpiry) {
     return managementApiToken;
+  }
+
+  // Validate configuration
+  if (
+    !auth0Config.domain ||
+    !auth0Config.clientId ||
+    !auth0Config.clientSecret ||
+    !auth0Config.audience
+  ) {
+    console.error("Auth0 Management API configuration is incomplete:", {
+      domain: !!auth0Config.domain,
+      clientId: !!auth0Config.clientId,
+      clientSecret: !!auth0Config.clientSecret,
+      audience: !!auth0Config.audience,
+    });
+    throw new Error("Auth0 Management API configuration is incomplete");
   }
 
   try {
@@ -53,23 +71,51 @@ async function getManagementApiToken() {
 }
 
 /**
- * Fetch users from Auth0
- * @returns {Promise<Array>} List of Auth0 users
+ * Fetch users from Auth0 with pagination to get all users
+ * @returns {Promise<Array>} List of all Auth0 users
  */
 async function getAuth0Users() {
   try {
     const token = await getManagementApiToken();
+    const allUsers = [];
+    let page = 0;
+    const perPage = 100; // Maximum allowed per page
+    let hasMoreUsers = true;
 
-    const response = await axios.get(
-      `https://${auth0Config.domain}/api/v2/users`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+    while (hasMoreUsers) {
+      const response = await axios.get(
+        `https://${auth0Config.domain}/api/v2/users`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          params: {
+            page: page,
+            per_page: perPage,
+            include_totals: true,
+          },
+        }
+      );
+
+      const { users, total, start, length } = response.data;
+
+      // Add users from this page to our collection
+      allUsers.push(...users);
+
+      // Check if we have more pages to fetch
+      hasMoreUsers = start + length < total && length === perPage;
+      page++;
+
+      // Safety check to prevent infinite loops (Auth0 has a 1000 user limit anyway)
+      if (page > 10) {
+        console.warn(
+          "Auth0 user sync: Reached maximum page limit (1000 users). Stopping pagination."
+        );
+        break;
       }
-    );
+    }
 
-    return response.data;
+    return allUsers;
   } catch (error) {
     console.error("Error fetching Auth0 users:", error.message);
     if (error.response) {
@@ -81,7 +127,7 @@ async function getAuth0Users() {
 
 /**
  * Toggle user blocked status in Auth0
- * @param {string} userId - Auth0 user ID
+ * @param {string} userId - Auth0 user ID (e.g., "auth0|680e7367e59f4f4d6e9c8c3e")
  * @param {boolean} blocked - Whether to block or unblock the user
  * @returns {Promise<Object>} Updated user object
  */
@@ -89,9 +135,14 @@ async function toggleUserBlockedStatus(userId, blocked) {
   try {
     const token = await getManagementApiToken();
 
+    // Ensure the payload is properly formatted
+    const payload = { blocked: Boolean(blocked) };
+
     const response = await axios.patch(
-      `https://${auth0Config.domain}/api/v2/users/${userId}`,
-      { blocked },
+      `https://${auth0Config.domain}/api/v2/users/${encodeURIComponent(
+        userId
+      )}`,
+      payload,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -107,7 +158,12 @@ async function toggleUserBlockedStatus(userId, blocked) {
       error.message
     );
     if (error.response) {
-      console.error("Response data:", error.response.data);
+      console.error("Auth0 API Error:", {
+        status: error.response.status,
+        data: error.response.data,
+        userId: userId,
+        blocked: Boolean(blocked),
+      });
     }
     throw new Error(`Could not ${blocked ? "block" : "unblock"} Auth0 user`);
   }
