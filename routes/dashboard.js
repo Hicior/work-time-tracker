@@ -27,7 +27,9 @@ router.get("/", async (req, res) => {
 
     // Get the last day of the month
     const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
-    const endDate = `${selectedYear}-${formattedMonth}-${lastDay}`;
+    const endDate = `${selectedYear}-${formattedMonth}-${lastDay
+      .toString()
+      .padStart(2, "0")}`;
 
     // Get all users
     const users = await User.getAll();

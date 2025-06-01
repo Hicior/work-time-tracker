@@ -159,10 +159,8 @@ class Holiday {
   // Get total holidays by user ID for a month
   static async getTotalMonthlyHolidays(userId, year, month) {
     try {
-      // Format month to ensure it's 2 digits
-      const formattedMonth = month.toString().padStart(2, "0");
-      const startDate = `${year}-${formattedMonth}-01`;
-      const endDate = `${year}-${formattedMonth}-31`; // Will automatically handle month bounds
+      const { getMonthDateRange } = require("../utils/dateUtils");
+      const { startDate, endDate } = getMonthDateRange(year, month);
 
       const holidays = await Holiday.findByUserAndDateRange(
         userId,

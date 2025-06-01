@@ -5,6 +5,7 @@
  * Enforces business rules for work hour entries including validation of hours and dates.
  */
 const { dbAsync } = require("../db/database");
+const { getMonthDateRange } = require("../utils/dateUtils");
 
 class WorkHours {
   constructor(data) {
@@ -61,10 +62,7 @@ class WorkHours {
   // Get total work hours by user ID for a month
   static async getTotalMonthlyHours(userId, year, month) {
     try {
-      // Format month to ensure it's 2 digits
-      const formattedMonth = month.toString().padStart(2, "0");
-      const startDate = `${year}-${formattedMonth}-01`;
-      const endDate = `${year}-${formattedMonth}-31`; // Will automatically handle month bounds
+      const { startDate, endDate } = getMonthDateRange(year, month);
 
       const result = await dbAsync.get(
         "SELECT SUM(total_hours) as total FROM work_hours WHERE user_id = $1 AND work_date BETWEEN $2 AND $3",

@@ -176,6 +176,17 @@ app.get("/", async (req, res) => {
       };
     } catch (error) {
       console.error("Error getting user data for homepage:", error);
+      // Provide fallback monthStats to prevent template crashes
+      monthStats = {
+        totalWorkHours: 0,
+        holidayCount: 0,
+        totalHolidayHours: 0,
+        publicHolidaysCount: 0,
+        publicHolidayHours: 0,
+        totalCombinedHours: 0,
+        requiredMonthlyHours: 0,
+        remainingHours: 0,
+      };
     }
   }
 

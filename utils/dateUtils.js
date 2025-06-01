@@ -199,6 +199,31 @@ function formatDayAndMonthGenitive(dateValue) {
   }
 }
 
+/**
+ * Get the properly formatted start and end dates for a given month and year.
+ * This prevents date calculation errors for months with different day counts.
+ * @param {number} year - The year (e.g., 2025)
+ * @param {number} month - The month (1-12)
+ * @returns {object} Object with startDate and endDate strings in YYYY-MM-DD format
+ */
+function getMonthDateRange(year, month) {
+  try {
+    const formattedMonth = month.toString().padStart(2, "0");
+    const startDate = `${year}-${formattedMonth}-01`;
+
+    // Calculate the actual last day of the month
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${formattedMonth}-${lastDay
+      .toString()
+      .padStart(2, "0")}`;
+
+    return { startDate, endDate };
+  } catch (error) {
+    console.error("Error calculating month date range:", error);
+    throw error;
+  }
+}
+
 module.exports = {
   getWeekdaysInMonth,
   getDayOfWeekName,
@@ -207,4 +232,5 @@ module.exports = {
   formatDateForDisplay,
   formatDateTimeForDisplay,
   formatDayAndMonthGenitive,
+  getMonthDateRange,
 };
