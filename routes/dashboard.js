@@ -147,6 +147,17 @@ router.get("/", async (req, res) => {
       publicHolidayMap[date] = ph.name;
     });
 
+    // Calculate required monthly hours
+    const { getWeekdaysInMonth } = require("../utils/dateUtils");
+    const hoursPerDay = 8;
+    const workDaysInMonth = getWeekdaysInMonth(selectedYear, selectedMonth);
+
+    // Count all public holidays for the calculation
+    const totalPublicHolidaysCount = publicHolidays.length;
+
+    const requiredMonthlyHours =
+      (workDaysInMonth - totalPublicHolidaysCount) * hoursPerDay;
+
     res.render("dashboard/index", {
       title: "Dashboard pracowników",
       currentPage: "employees-dashboard",
@@ -159,6 +170,7 @@ router.get("/", async (req, res) => {
       selectedYear: selectedYear,
       publicHolidays: publicHolidayMap,
       messages: prepareMessages(req.query),
+      requiredMonthlyHours: requiredMonthlyHours,
     });
   } catch (error) {
     console.error("Error loading dashboard:", error);

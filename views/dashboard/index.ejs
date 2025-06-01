@@ -62,12 +62,21 @@
         </svg>
         Legenda:
       </h3>
-      <div class="mt-2 md:mt-0 text-sm font-medium text-gray-700 bg-blue-50 rounded-lg px-3 py-1.5 border border-blue-100 flex items-center" 
-           title="Liczba osób pracujących w danym miesiącu">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-        <span class="font-bold text-blue-600"><%= totalActiveEmployees %></span>
+      <div class="mt-2 md:mt-0 flex items-center space-x-4">
+        <div class="text-sm font-medium text-gray-700 bg-blue-50 rounded-lg px-3 py-1.5 border border-blue-100 flex items-center"
+             title="Liczba osób pracujących w danym miesiącu">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span class="font-bold text-blue-600"><%= totalActiveEmployees %></span>
+        </div>
+        <div class="text-sm font-medium text-gray-700 bg-orange-50 rounded-lg px-3 py-1.5 border border-orange-100 flex items-center"
+             title="Wymagane godziny pracy w miesiącu (dni robocze - wszystkie święta) * 8h">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span class="font-bold text-orange-600"><%= requiredMonthlyHours %>h</span>
+        </div>
       </div>
     </div>
     <div class="flex flex-wrap gap-4 justify-start">
