@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/css/output.css" />
     <% // Set default values if not provided %> <% if (typeof currentPage ===
     'undefined') { currentPage = ''; } %>
+    <% if (typeof currentView === 'undefined') { currentView = ''; } %>
   </head>
   <body class="bg-gray-50 min-h-screen flex flex-col">
     <!-- Include notification partial -->
@@ -125,6 +126,8 @@
       <div class="max-w-[1600px] mx-auto py-6 sm:px-6 lg:px-8"><%- body %></div>
       <% } else if (currentPage === 'admin') { %>
       <div class="max-w-[1600px] mx-auto py-6 sm:px-6 lg:px-8"><%- body %></div>
+      <% } else if (currentView === 'by-person') { %>
+      <div class="max-w-[1400px] mx-auto py-6 sm:px-6 lg:px-8"><%- body %></div>
       <% } else { %>
       <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8"><%- body %></div>
       <% } %>

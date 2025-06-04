@@ -1,0 +1,372 @@
+<%- layout('layouts/main') %>
+
+<div class="px-4 py-5 sm:px-6">
+  <div class="flex justify-between items-center mb-6">
+    <div class="flex items-center space-x-4">
+      <h2 class="text-2xl font-bold text-gray-900">
+        Urlopy pracowników
+      </h2>
+      <div class="flex space-x-2">
+        <a
+          href="/holidays/employees/by-person?month=<%= month %>&year=<%= year %>"
+          class="text-sm px-3 py-1 rounded-md <%= currentView === 'by-person' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' %>"
+          >Wg osoby</a
+        >
+        <a
+        href="/holidays/employees/by-date?month=<%= month %>&year=<%= year %>"
+        class="text-sm px-3 py-1 rounded-md <%= currentView === 'by-date' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' %>"
+        >Wg daty</a
+        >
+      </div>
+    </div>
+    <div class="flex items-center space-x-4">
+      <!-- Month Navigation -->
+      <div class="flex items-center space-x-2">
+        <a href="/holidays/employees/by-person?month=<%= month === 1 ? 12 : month - 1 %>&year=<%= month === 1 ? year - 1 : year %>" 
+           class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+        </a>
+        <div class="px-3 py-1 bg-blue-50 rounded-md border">
+          <span class="text-sm text-gray-500">Miesiąc:</span>
+          <span class="ml-1 font-medium"><%= month %>/<%= year %></span>
+        </div>
+        <a href="/holidays/employees/by-person?month=<%= month === 12 ? 1 : month + 1 %>&year=<%= month === 12 ? year + 1 : year %>" 
+           class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation links -->
+  <div class="mb-10">
+    <div class="flex space-x-4">
+      <a href="/holidays" class="text-blue-600 font-medium hover:text-blue-800"
+        >Bieżący miesiąc</a
+      >
+      <a
+        href="/holidays/future"
+        class="text-blue-600 font-medium hover:text-blue-800"
+        >Przyszłe urlopy</a
+      >
+      <a
+        href="/holidays/history"
+        class="text-blue-600 font-medium hover:text-blue-800"
+        >Historia urlopów</a
+      >
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="mb-6 bg-white p-5 rounded-lg shadow border border-gray-100">
+    <div
+      class="flex flex-col md:flex-row justify-between items-start md:items-center mb-3">
+      <h3 class="text-lg font-bold text-gray-800 flex items-center">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5 mr-2"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Legenda:
+      </h3>
+      <div class="mt-2 md:mt-0 flex items-center space-x-4">
+        <div
+          class="text-sm font-medium text-gray-700 bg-blue-50 rounded-lg px-3 py-1.5 border border-blue-100 flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 mr-1 text-blue-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span class="font-bold text-blue-600"
+            ><%= totalEmployeesWithHolidays %></span
+          >
+        </div>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-4 justify-start">
+      <div class="flex items-center p-2 rounded">
+        <div
+          class="w-6 h-6 bg-green-100 mr-2 rounded border border-green-200"></div>
+        <span class="text-sm font-medium text-gray-700">Dzień pracujący</span>
+      </div>
+      <div class="flex items-center p-2 rounded">
+        <div
+          class="w-6 h-6 bg-red-100 mr-2 rounded border border-red-200"></div>
+        <span class="text-sm font-medium text-gray-700">Urlop</span>
+      </div>
+      <div class="flex items-center p-2 rounded">
+        <div
+          class="w-6 h-6 bg-purple-100 mr-2 rounded border border-purple-200"></div>
+        <span class="text-sm font-medium text-gray-700">Święto</span>
+      </div>
+      <div class="flex items-center p-2 rounded">
+        <div
+          class="w-6 h-6 bg-gray-100 mr-2 rounded border border-gray-200"></div>
+        <span class="text-sm font-medium text-gray-700">Weekend</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search bar -->
+  <div class="mb-6 bg-white p-5 rounded-lg shadow border border-gray-100">
+    <div class="relative">
+      <input
+        type="text"
+        id="employeeSearch"
+        placeholder="Szukaj pracownika..."
+        class="w-full p-3 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+      <div
+        class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <svg
+          class="h-5 w-5 text-gray-400"
+          fill="currentColor"
+          viewBox="0 0 20 20">
+          <path
+            fill-rule="evenodd"
+            d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+            clip-rule="evenodd"></path>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Holiday Table -->
+  <div class="overflow-x-auto">
+    <div class="align-middle inline-block min-w-full">
+      <% if (!groupedEmployees || groupedEmployees.length === 0) { %>
+      <div class="text-center py-12 bg-gray-50 rounded-lg">
+        <p class="text-gray-500 text-lg">
+          Brak danych o urlopach pracowników w tym miesiącu (lub żaden pracownik nie ma urlopu).
+        </p>
+      </div>
+      <% } else { %>
+      <% groupedEmployees.forEach((group, groupIndex) => { %>
+        <!-- Each group in its own card -->
+        <div class="mb-6 shadow border-b border-gray-200 sm:rounded-lg">
+          <!-- Group header -->
+          <div class="bg-gray-100 border-b border-gray-300 px-6 py-3 text-left text-sm font-medium">
+            <div class="flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span class="text-base font-semibold text-gray-900"><%= group.name %></span>
+              <span class="ml-2 bg-gray-200 text-gray-700 rounded-full px-2 py-1 text-xs">
+                <%= group.employees.length %> <%= group.employees.length === 1 ? 'pracownik' : 'pracowników' %>
+              </span>
+            </div>
+          </div>
+          
+          <!-- Group table -->
+          <table class="min-w-full divide-y divide-gray-200">
+            <colgroup>
+              <col
+                style="
+                  width: 180px !important;
+                  min-width: 180px !important;
+                  max-width: 180px !important;
+                " />
+              <% for (let i = 0; i < daysInMonth.length; i++) { %>
+              <col
+                style="
+                  width: 32px !important;
+                  min-width: 32px !important;
+                  max-width: 32px !important;
+                " />
+              <% } %>
+              <col
+                style="
+                  width: 90px !important;
+                  min-width: 90px !important;
+                  max-width: 90px !important;
+                " />
+            </colgroup>
+            <thead class="bg-gray-50">
+              <tr>
+                <th
+                  scope="col"
+                  class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10"
+                  style="
+                    width: 180px !important;
+                    min-width: 180px !important;
+                    max-width: 180px !important;
+                  ">
+                  Pracownik
+                </th>
+
+                <!-- Day headers -->
+                <% daysInMonth.forEach(date => { 
+                  const dayDate = new Date(date);
+                  const dayOfWeek = dayDate.getDay(); 
+                  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; 
+                  const dateKey = date.split('T')[0];
+                  const isPublicHoliday = publicHolidays[dateKey]; 
+                  let headerClass = "px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"; 
+                  if (isWeekend) { 
+                    headerClass += " bg-gray-100"; 
+                  } else if (isPublicHoliday) { 
+                    headerClass += " bg-purple-100"; 
+                  } 
+                  let headerTitle = isPublicHoliday ? isPublicHoliday : ''; 
+                %>
+                <th
+                  scope="col"
+                  class="<%= headerClass %>"
+                  title="<%= headerTitle %>"
+                  style="
+                    width: 32px !important;
+                    min-width: 32px !important;
+                    max-width: 32px !important;
+                    height: 32px !important;
+                  ">
+                  <%= dayDate.getDate() %>
+                </th>
+                <% }); %>
+
+                <th
+                  scope="col"
+                  class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50 z-10"
+                  style="
+                    width: 90px !important;
+                    min-width: 90px !important;
+                    max-width: 90px !important;
+                  ">
+                  Dni urlopu
+                </th>
+              </tr>
+            </thead>
+
+            <tbody class="bg-white divide-y divide-gray-200">
+              <% if (group.employees.length === 0) { %>
+              <tr>
+                <td colspan="<%= daysInMonth.length + 2 %>" class="px-2 py-3 text-center text-sm text-gray-500">
+                  Brak pracowników z urlopami w tej grupie
+                </td>
+              </tr>
+              <% } else { %>
+                <% group.employees.forEach((employee, employeeIndex) => { %>
+                <tr
+                  class="employee-row <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %>"
+                  data-name="<%= employee.name.toLowerCase() %>"
+                  data-email="<%= employee.email.toLowerCase() %>">
+                  <!-- Employee name (sticky) -->
+                  <td
+                    class="px-2 py-2 whitespace-nowrap truncate text-sm font-medium text-gray-900 sticky left-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10"
+                    style="
+                      width: 180px !important;
+                      min-width: 180px !important;
+                      max-width: 180px !important;
+                    "
+                    title="<%= employee.name %>">
+                    <%= employee.name %>
+                  </td>
+
+                  <!-- Holiday status for each day -->
+                  <% 
+                    daysInMonth.forEach(date => { 
+                      const isHoliday = employee.holidays.includes(date); 
+                      const dayDate = new Date(date);
+                      const dayOfWeek = dayDate.getDay(); 
+                      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; 
+                      const dateKey = date.split('T')[0];
+                      const isPublicHoliday = publicHolidays[dateKey]; 
+                      
+                      let cellClass = ""; 
+                      let tooltip = ''; 
+                      
+                      if (isHoliday) { 
+                        cellClass += " bg-red-100"; 
+                        tooltip = 'Urlop'; 
+                      } else if (isWeekend) { 
+                        cellClass += " bg-gray-100"; 
+                      } else if (isPublicHoliday) { 
+                        cellClass += " bg-purple-100"; 
+                        tooltip = `Święto: ${isPublicHoliday}`; 
+                      } else { 
+                        cellClass += " bg-green-100"; 
+                      } 
+                  %>
+                  <td
+                    class="<%= cellClass.trim() %>"
+                    title="<%= tooltip %>"
+                    style="
+                      width: 32px !important;
+                      min-width: 32px !important;
+                      max-width: 32px !important;
+                      height: 32px !important;
+                      padding: 0;
+                      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+                    ">
+                    <% if (isHoliday) { %>
+                    <div class="w-full h-full flex items-center justify-center text-xs font-bold text-red-300">u</div>
+                    <% } %>
+                  </td>
+                  <% }); %>
+
+                  <!-- Holiday count (sticky) -->
+                  <td
+                    class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900 text-center sticky right-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10"
+                    style="
+                      width: 90px !important;
+                      min-width: 90px !important;
+                      max-width: 90px !important;
+                    ">
+                    <%= employee.holidayCount %>
+                  </td>
+                </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      <% }); %>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("employeeSearch");
+    const employeeRows = document.querySelectorAll(".employee-row");
+
+    searchInput.addEventListener("input", function () {
+      const searchTerm = this.value.toLowerCase().trim();
+
+      employeeRows.forEach((row) => {
+        const name = row.dataset.name;
+        const email = row.dataset.email;
+
+        if (name.includes(searchTerm) || email.includes(searchTerm)) {
+          row.style.display = "";
+        } else {
+          row.style.display = "none";
+        }
+      });
+    });
+
+    // Clear search when clicking the X button (for browsers that support it)
+    searchInput.addEventListener("search", function () {
+      if (this.value === "") {
+        this.dispatchEvent(new Event("input"));
+      }
+    });
+  });
+</script>

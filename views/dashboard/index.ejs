@@ -131,8 +131,9 @@
               <% for (let i = 0; i < daysInMonth.length; i++) { %>
                 <col style="width: 32px !important; min-width: 32px !important; max-width: 32px !important;">
               <% } %>
-              <col style="width: 74px !important; min-width: 74px !important; max-width: 74px !important;">
-              <col style="width: 74px !important; min-width: 74px !important; max-width: 74px !important;">
+              <col style="width: 60px !important; min-width: 60px !important; max-width: 60px !important;">
+              <col style="width: 60px !important; min-width: 60px !important; max-width: 60px !important;">
+              <col style="width: 60px !important; min-width: 60px !important; max-width: 60px !important;">
             </colgroup>
             <thead class="bg-gray-50">
               <tr>
@@ -165,11 +166,14 @@
                   </th>
                 <% }); %>
                 
-                <th scope="col" class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50 z-10" style="width: 74px !important; min-width: 74px !important; max-width: 74px !important;">
+                <th scope="col" class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50 z-10" style="width: 60px !important; min-width: 60px !important; max-width: 60px !important;">
                   Praca
                 </th>
-                <th scope="col" class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50 z-10" style="width: 74px !important; min-width: 74px !important; max-width: 74px !important;">
+                <th scope="col" class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50 z-10" style="width: 60px !important; min-width: 60px !important; max-width: 60px !important;">
                   Łącznie
+                </th>
+                <th scope="col" class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50 z-10" style="width: 60px !important; min-width: 60px !important; max-width: 60px !important;">
+                  h+
                 </th>
               </tr>
             </thead>
@@ -177,7 +181,7 @@
             <tbody class="bg-white divide-y divide-gray-200">
                               <% if (filteredEmployees.length === 0) { %>
                 <tr>
-                  <td colspan="<%= daysInMonth.length + 3 %>" class="px-2 py-3 text-center text-sm text-gray-500">
+                  <td colspan="<%= daysInMonth.length + 4 %>" class="px-2 py-3 text-center text-sm text-gray-500">
                     Brak aktywnych pracowników w tej grupie
                   </td>
                 </tr>
@@ -257,13 +261,19 @@
                     <% }); %>
                     
                     <!-- Work hours total (sticky) -->
-                    <td class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900 text-center sticky right-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10" style="width: 74px !important; min-width: 74px !important; max-width: 74px !important;">
+                    <td class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900 text-center sticky right-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10" style="width: 60px !important; min-width: 60px !important; max-width: 60px !important;">
                       <%= employee.totalHours.toFixed(1) %>
                     </td>
                     
                     <!-- Combined total including holidays (sticky) -->
-                    <td class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900 text-center sticky right-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10" style="width: 74px !important; min-width: 74px !important; max-width: 74px !important;">
+                    <td class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900 text-center sticky right-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10" style="width: 60px !important; min-width: 60px !important; max-width: 60px !important;">
                       <%= combinedTotal.toFixed(1) %>
+                    </td>
+                    
+                    <!-- Overtime hours (sticky) -->
+                    <td class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900 text-center sticky right-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10" style="width: 60px !important; min-width: 60px !important; max-width: 60px !important;">
+                      <% const overtimeHours = Math.max(0, combinedTotal - requiredMonthlyHours); %>
+                      <%= overtimeHours.toFixed(1) %>
                     </td>
                   </tr>
                 <% }); %>

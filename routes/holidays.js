@@ -10,12 +10,14 @@ const Holiday = require("../models/Holiday");
 const PublicHoliday = require("../models/PublicHoliday");
 const WorkHours = require("../models/WorkHours");
 const User = require("../models/User");
+const Group = require("../models/Group");
 const {
   getWeekdaysInMonth,
   formatDate,
   formatDateForDisplay,
   getDayOfWeekName,
   formatDayAndMonthGenitive,
+  getMonthDateRange,
 } = require("../utils/dateUtils");
 const { prepareMessages } = require("../utils/messageUtils");
 
@@ -48,14 +50,13 @@ const getCurrentMonthInfo = () => {
   const formattedMonth = month.toString().padStart(2, "0");
 
   // Create date objects for first and last day of month
-  const firstDayObj = new Date(year, month - 1, 1);
-  const lastDayObj = new Date(year, month, 0);
+  const { startDate, endDate } = getMonthDateRange(year, month);
 
   return {
     year,
     month,
-    firstDay: formatDate(firstDayObj),
-    lastDay: formatDate(lastDayObj),
+    firstDay: startDate,
+    lastDay: endDate,
     formattedMonth,
   };
 };
@@ -255,7 +256,10 @@ router.post("/:id/delete", async (req, res) => {
 
     // Ensure user owns the entry and it exists
     if (!holidayEntry || holidayEntry.user_id !== userId) {
-      return res.redirect("/holidays?error=not_found");
+      // Check if user is admin, if so, allow deletion
+      if (!req.user.isAdmin()) {
+        return res.redirect("/holidays?error=not_found");
+      }
     }
 
     // Delete the entry
@@ -367,16 +371,27 @@ router.get("/future", async (req, res) => {
   }
 });
 
-// Display all employee holidays for the current month
-router.get("/employees", async (req, res) => {
+// Redirect /employees to /employees/by-date by default
+router.get("/employees", (req, res) => {
+  res.redirect("/holidays/employees/by-date");
+});
+
+// Display all employee holidays for the current month (grouped by date)
+router.get("/employees/by-date", async (req, res) => {
   try {
-    const { year, month, firstDay, lastDay } = getCurrentMonthInfo();
+    // Get month and year from query parameters or use current month
+    const queryMonth = parseInt(req.query.month) || new Date().getMonth() + 1;
+    const queryYear = parseInt(req.query.year) || new Date().getFullYear();
+    
+    // Validate month and year
+    const month = Math.max(1, Math.min(12, queryMonth));
+    const year = Math.max(2020, Math.min(2030, queryYear)); // Reasonable year range
+    
+    // Get date range for the specified month
+    const { startDate, endDate } = getMonthDateRange(year, month);
 
     // Get all users
     const allUsers = await User.getAll();
-
-    // Get all public holidays for reference
-    const publicHolidays = await PublicHoliday.findByMonthAndYear(month, year);
 
     // Initialize an empty object to hold holidays grouped by date
     const holidaysByDate = {};
@@ -386,8 +401,8 @@ router.get("/employees", async (req, res) => {
       // Get holidays for this user for the current month
       const userHolidays = await Holiday.findByUserAndDateRange(
         user.id,
-        firstDay,
-        lastDay
+        startDate,
+        endDate
       );
 
       // Process each holiday for this user
@@ -421,31 +436,160 @@ router.get("/employees", async (req, res) => {
       month,
       year,
       holidaysByDate,
-      publicHolidays,
       users: allUsers,
       isAuthenticated: req.oidc.isAuthenticated(),
       user: req.oidc.user,
       dbUser: req.user,
       messages: prepareMessages(req.query),
-      formatDateForDisplay, // Keep this for public holidays if needed elsewhere
-      formatDayAndMonthGenitive, // Pass the new function
+      formatDateForDisplay,
+      formatDayAndMonthGenitive,
+      currentView: "by-date",
     });
   } catch (error) {
-    console.error("Error loading employee holidays:", error);
+    console.error("Error loading employee holidays (by date):", error);
     res.render("holidays/employees", {
       title: "Urlopy pracowników",
       currentPage: "holidays",
       month: new Date().getMonth() + 1,
       year: new Date().getFullYear(),
       holidaysByDate: {},
-      publicHolidays: [],
       users: [],
       isAuthenticated: req.oidc.isAuthenticated(),
       user: req.oidc.user,
       dbUser: req.user,
       messages: { error: "Wystąpił błąd podczas ładowania danych" },
-      formatDateForDisplay: () => "", // Dummy function
-      formatDayAndMonthGenitive: () => "", // Dummy function
+      formatDateForDisplay: () => "",
+      formatDayAndMonthGenitive: () => "",
+      currentView: "by-date",
+    });
+  }
+});
+
+// Display all employee holidays for the current month (grouped by person)
+router.get("/employees/by-person", async (req, res) => {
+  try {
+    // Get month and year from query parameters or use current month
+    const queryMonth = parseInt(req.query.month) || new Date().getMonth() + 1;
+    const queryYear = parseInt(req.query.year) || new Date().getFullYear();
+    
+    // Validate month and year
+    const month = Math.max(1, Math.min(12, queryMonth));
+    const year = Math.max(2020, Math.min(2030, queryYear)); // Reasonable year range
+    
+    // Get date range for the specified month
+    const { startDate, endDate } = getMonthDateRange(year, month);
+
+    const allUsers = await User.getAll();
+    const allGroups = await Group.findAll();
+    const publicHolidaysRaw = await PublicHoliday.findByMonthAndYear(
+      month,
+      year
+    );
+
+    const publicHolidaysMap = {};
+    publicHolidaysRaw.forEach((ph) => {
+      publicHolidaysMap[formatDate(ph.holiday_date)] = ph.name;
+    });
+
+    const daysInMonth = [];
+    const date = new Date(year, month - 1, 1);
+    while (date.getMonth() === month - 1) {
+      daysInMonth.push(formatDate(new Date(date)));
+      date.setDate(date.getDate() + 1);
+    }
+
+    // Create group mapping similar to dashboard
+    const groupMap = {};
+    
+    // Initialize group map with all groups
+    allGroups.forEach((group) => {
+      groupMap[group.id] = {
+        id: group.id,
+        name: group.name,
+        employees: [],
+      };
+    });
+
+    // Add "No Group" for users without a group
+    groupMap[0] = {
+      id: 0,
+      name: "Bez grupy",
+      employees: [],
+    };
+
+    // Process each user and group them
+    for (const user of allUsers) {
+      const userHolidays = await Holiday.findByUserAndDateRange(
+        user.id,
+        startDate,
+        endDate
+      );
+      const holidayDates = userHolidays.map((h) => formatDate(h.holiday_date));
+
+      // Filter out users with no holidays in the current month
+      if (holidayDates.length > 0) {
+        const employeeData = {
+          id: user.id,
+          name: user.name || user.email.split("@")[0],
+          email: user.email,
+          holidays: holidayDates,
+          holidayCount: holidayDates.length,
+        };
+
+        // Add user to the appropriate group
+        const groupId = user.group_id || 0; // Use 0 for users without a group
+        groupMap[groupId].employees.push(employeeData);
+      }
+    }
+
+    // Convert groupMap to array and sort groups, filter out empty groups
+    const groupedEmployees = Object.values(groupMap)
+      .filter((group) => group.employees.length > 0) // Only include groups with employees
+      .sort((a, b) => {
+        // Sort "No Group" to the end
+        if (a.id === 0) return 1;
+        if (b.id === 0) return -1;
+        // Otherwise sort alphabetically
+        return a.name.localeCompare(b.name);
+      });
+
+    // Calculate total number of employees with holidays
+    let totalEmployeesWithHolidays = 0;
+    groupedEmployees.forEach(group => {
+      totalEmployeesWithHolidays += group.employees.length;
+    });
+
+    res.render("holidays/employees-by-person", {
+      title: "Urlopy pracowników - wg osoby",
+      currentPage: "holidays",
+      month,
+      year,
+      groupedEmployees,
+      daysInMonth,
+      publicHolidays: publicHolidaysMap,
+      totalEmployeesWithHolidays,
+      isAuthenticated: req.oidc.isAuthenticated(),
+      user: req.oidc.user,
+      dbUser: req.user,
+      messages: prepareMessages(req.query),
+      currentView: "by-person",
+    });
+  } catch (error) {
+    console.error("Error loading employee holidays (by person):", error);
+    res.render("holidays/employees-by-person", {
+      title: "Urlopy pracowników - wg osoby",
+      currentPage: "holidays",
+      month: new Date().getMonth() + 1,
+      year: new Date().getFullYear(),
+      groupedEmployees: [],
+      daysInMonth: [],
+      publicHolidays: {},
+      totalEmployeesWithHolidays: 0,
+      isAuthenticated: req.oidc.isAuthenticated(),
+      user: req.oidc.user,
+      dbUser: req.user,
+      messages: { error: "Wystąpił błąd podczas ładowania danych" },
+      currentView: "by-person",
     });
   }
 });

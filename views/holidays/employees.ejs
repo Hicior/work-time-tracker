@@ -2,10 +2,37 @@
 
 <div class="bg-white rounded-lg shadow p-6">
   <div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-bold text-gray-900">Urlopy pracowników</h2>
-    <div>
-      <span class="text-sm text-gray-500">Miesiąc:</span>
-      <span class="ml-1 font-medium"><%= month %>/<%= year %></span>
+    <div class="flex items-center space-x-4">
+      <h2 class="text-2xl font-bold text-gray-900">Urlopy pracowników</h2>
+      <div class="flex space-x-2">
+        <a
+        href="/holidays/employees/by-person?month=<%= month %>&year=<%= year %>"
+        class="text-sm px-3 py-1 rounded-md <%= currentView === 'by-person' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' %>">Wg osoby</a>
+        <a
+          href="/holidays/employees/by-date?month=<%= month %>&year=<%= year %>"
+          class="text-sm px-3 py-1 rounded-md <%= currentView === 'by-date' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' %>">Wg daty</a>
+      </div>
+    </div>
+    <div class="flex items-center space-x-4">
+      <!-- Month Navigation -->
+      <div class="flex items-center space-x-2">
+        <a href="/holidays/employees/by-date?month=<%= month === 1 ? 12 : month - 1 %>&year=<%= month === 1 ? year - 1 : year %>" 
+           class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+        </a>
+        <div class="px-3 py-1 bg-blue-50 rounded-md border">
+          <span class="text-sm text-gray-500">Miesiąc:</span>
+          <span class="ml-1 font-medium"><%= month %>/<%= year %></span>
+        </div>
+        <a href="/holidays/employees/by-date?month=<%= month === 12 ? 1 : month + 1 %>&year=<%= month === 12 ? year + 1 : year %>" 
+           class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </a>
+      </div>
     </div>
   </div>
 
@@ -23,11 +50,6 @@
       href="/holidays/history"
       class="text-blue-600 font-medium hover:text-blue-800"
       >Historia urlopów</a
-    >
-    <a
-      href="/holidays/employees"
-      class="text-blue-600 font-medium underline hover:text-blue-800"
-      >Urlopy pracowników</a
     >
   </div>
 
@@ -103,35 +125,6 @@
     </div>
     <% } %>
   </div>
-
-  <!-- Public holidays information -->
-  <% if (publicHolidays && publicHolidays.length > 0) { %>
-  <div class="mt-8">
-    <h3 class="text-lg font-medium text-gray-900 mb-3">
-      Dni ustawowo wolne w tym miesiącu
-    </h3>
-    <div class="bg-gray-50 rounded-lg p-4">
-      <ul class="space-y-2">
-        <% publicHolidays.forEach(holiday => { %>
-        <li class="flex items-center">
-          <span class="text-red-600 mr-2">
-            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clip-rule="evenodd"></path>
-            </svg>
-          </span>
-          <span class="text-sm">
-            <%= formatDayAndMonthGenitive(holiday.holiday_date) %> - <%=
-            holiday.name %>
-          </span>
-        </li>
-        <% }); %>
-      </ul>
-    </div>
-  </div>
-  <% } %>
 </div>
 
 <script>
