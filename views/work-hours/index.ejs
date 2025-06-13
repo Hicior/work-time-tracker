@@ -251,6 +251,104 @@
       <% } %>
     </div>
   </div>
+
+  <!-- Monthly Calendar View -->
+  <div class="mt-8 bg-gray-50 rounded-lg p-6">
+    <h3 class="text-lg font-medium text-gray-900 mb-4">
+      Przegląd miesięczny - 
+      <%= ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 
+           'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'][currentMonth] %> <%= currentYear %>
+    </h3>
+    
+    <div class="grid grid-cols-7 gap-2 mb-3">
+      <!-- Week day headers -->
+      <div class="bg-gray-200 rounded-lg py-2 px-1">
+        <div class="text-center text-xs font-semibold text-gray-700">Pon</div>
+      </div>
+      <div class="bg-gray-200 rounded-lg py-2 px-1">
+        <div class="text-center text-xs font-semibold text-gray-700">Wto</div>
+      </div>
+      <div class="bg-gray-200 rounded-lg py-2 px-1">
+        <div class="text-center text-xs font-semibold text-gray-700">Śro</div>
+      </div>
+      <div class="bg-gray-200 rounded-lg py-2 px-1">
+        <div class="text-center text-xs font-semibold text-gray-700">Czw</div>
+      </div>
+      <div class="bg-gray-200 rounded-lg py-2 px-1">
+        <div class="text-center text-xs font-semibold text-gray-700">Pią</div>
+      </div>
+      <div class="bg-gray-200 rounded-lg py-2 px-1">
+        <div class="text-center text-xs font-semibold text-gray-700">Sob</div>
+      </div>
+      <div class="bg-gray-200 rounded-lg py-2 px-1">
+        <div class="text-center text-xs font-semibold text-gray-700">Nie</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-7 gap-2">
+      <% 
+      // Calculate empty cells for the beginning of the month
+      const firstDay = new Date(currentYear, currentMonth - 1, 1);
+      const firstDayOfWeek = (firstDay.getDay() + 6) % 7; // Convert to Monday = 0
+      
+      // Add empty cells for days before the first day of the month
+      for (let i = 0; i < firstDayOfWeek; i++) { %>
+        <div class="h-10"></div>
+      <% } %>
+
+      <% calendarData.forEach(day => { 
+        let dayClass = 'h-10 flex items-center justify-center text-sm font-medium rounded-lg border ';
+        
+        if (day.isWeekend) {
+          // Weekend - neutral gray
+          dayClass += 'bg-gray-100 text-gray-500 border-gray-200';
+        } else if (day.isHoliday) {
+          // Personal holiday - blue
+          dayClass += 'bg-blue-100 text-blue-700 border-blue-200';
+        } else if (day.isPublicHoliday) {
+          // Public holiday - purple
+          dayClass += 'bg-purple-100 text-purple-700 border-purple-200';
+        } else if (day.hasWorkHours) {
+          // Work day with hours - green
+          dayClass += 'bg-green-100 text-green-700 border-green-200';
+        } else if (day.needsAttention) {
+          // Work day without hours - red warning (only past days)
+          dayClass += 'bg-red-100 text-red-700 border-red-300 ring-2 ring-red-200';
+        } else {
+          // Regular work day without data (future days)
+          dayClass += 'bg-white text-gray-700 border-gray-200';
+        }
+      %>
+        <div class="<%= dayClass %>" title="<%= day.date %>">
+          <%= day.day %>
+        </div>
+      <% }); %>
+    </div>
+
+    <!-- Legend -->
+    <div class="mt-4 flex flex-wrap gap-4 text-xs">
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+        <span class="text-gray-600">Wpisane godziny</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-red-100 border border-red-300 ring-2 ring-red-200 rounded"></div>
+        <span class="text-gray-600">Brak wpisanych godzin</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-blue-100 border border-blue-200 rounded"></div>
+        <span class="text-gray-600">Urlop</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-purple-100 border border-purple-200 rounded"></div>
+        <span class="text-gray-600">Święto państwowe</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
+        <span class="text-gray-600">Weekend</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>

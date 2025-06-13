@@ -139,6 +139,79 @@ router.get("/", async (req, res) => {
       return dayOfWeek !== 0 && dayOfWeek !== 6; // 0 = Sunday, 6 = Saturday
     });
 
+    // Get all work hours for the current month (for calendar view)
+    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+    const formattedMonth = currentMonth.toString().padStart(2, "0");
+    const startDate = `${currentYear}-${formattedMonth}-01`;
+    const endDate = `${currentYear}-${formattedMonth}-${daysInMonth}`;
+    
+    const monthlyWorkHours = await WorkHours.findByUserAndDateRange(
+      userId,
+      startDate,
+      endDate
+    );
+
+    // Get holidays for the current month
+    const monthlyHolidays = await Holiday.findByUserAndDateRange(
+      userId,
+      startDate,
+      endDate
+    );
+
+    // Create calendar data for the current month
+    const calendarData = [];
+    const workHoursMap = {};
+    const holidaysMap = {};
+    const publicHolidaysMap = {};
+
+    // Create maps for easy lookup
+    monthlyWorkHours.forEach((entry) => {
+      const dateKey = formatDate(entry.work_date);
+      workHoursMap[dateKey] = entry.total_hours;
+    });
+
+    monthlyHolidays.forEach((holiday) => {
+      const dateKey = formatDate(holiday.holiday_date);
+      holidaysMap[dateKey] = true;
+    });
+
+    publicHolidays.forEach((holiday) => {
+      const dateKey = formatDate(holiday.holiday_date);
+      publicHolidaysMap[dateKey] = true;
+    });
+
+    // Generate calendar data for each day of the month
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0); // Reset time to compare dates only
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayStr = day.toString().padStart(2, "0");
+      const dateStr = `${currentYear}-${formattedMonth}-${dayStr}`;
+      const date = new Date(currentYear, currentMonth - 1, day);
+      const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+      
+      const hasWorkHours = workHoursMap[dateStr] > 0;
+      const isHoliday = holidaysMap[dateStr] || false;
+      const isPublicHoliday = publicHolidaysMap[dateStr] || false;
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isWorkday = !isWeekend && !isHoliday && !isPublicHoliday;
+      const isPastDate = date < todayDate;
+      const needsAttention = isWorkday && !hasWorkHours && isPastDate;
+
+      calendarData.push({
+        day,
+        date: dateStr,
+        dayOfWeek,
+        hasWorkHours,
+        isHoliday,
+        isPublicHoliday,
+        isWeekend,
+        isWorkday,
+        isPastDate,
+        needsAttention
+      });
+    }
+
     const totalWorkHours = await WorkHours.getTotalMonthlyHours(
       userId,
       currentYear,
@@ -178,6 +251,9 @@ router.get("/", async (req, res) => {
       isHolidayToday,
       publicHolidays, // Pass full public holidays list to the view
       publicHolidaysOnWorkdays, // Pass weekday public holidays array
+      calendarData, // Pass calendar data for monthly view
+      currentMonth,
+      currentYear,
       monthStats: {
         totalWorkHours: Math.round(totalWorkHours * 100) / 100,
         holidayCount,
@@ -213,6 +289,9 @@ router.get("/", async (req, res) => {
       isHolidayToday: false,
       publicHolidays: [], // Empty array in error case
       publicHolidaysOnWorkdays: [], // Empty array in error case
+      calendarData: [], // Empty calendar data in error case
+      currentMonth: new Date().getMonth() + 1,
+      currentYear: new Date().getFullYear(),
       monthStats: {
         totalWorkHours: 0,
         holidayCount: 0,
