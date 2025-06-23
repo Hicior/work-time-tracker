@@ -384,14 +384,38 @@
     document.getElementById('currentMonthBtn').href = `/holidays/employees/by-person?month=${displayMonth}&year=${displayYear}`;
     document.getElementById('nextMonthBtn').href = `/holidays/employees/by-person?month=${nextMonth}&year=${nextYear}`;
     
-    // Update styling - only selected month gets blue highlight
+    // Update styling - highlight whichever button represents the actually selected month
+    const prevBtn = document.getElementById('prevMonthBtn');
     const currentBtn = document.getElementById('currentMonthBtn');
-    if (displayMonth === selectedMonth && displayYear === selectedYear) {
-      currentBtn.className = "px-3 py-2 text-sm bg-blue-500 text-white rounded-md font-medium cursor-default";
+    const nextBtn = document.getElementById('nextMonthBtn');
+    
+    // Reset all buttons to default styling
+    const defaultClass = "px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md font-medium";
+    const middleDefaultClass = "px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md font-bold";
+    const selectedClass = "px-3 py-2 text-sm bg-blue-500 text-white rounded-md font-medium cursor-default";
+    const selectedMiddleClass = "px-3 py-2 text-sm bg-blue-500 text-white rounded-md font-bold cursor-default";
+    
+    // Check which button represents the selected month and highlight it
+    if (prevMonth === selectedMonth && prevYear === selectedYear) {
+      prevBtn.className = selectedClass;
+      prevBtn.removeAttribute('href');
+      currentBtn.className = middleDefaultClass;
+      nextBtn.className = defaultClass;
+    } else if (displayMonth === selectedMonth && displayYear === selectedYear) {
+      prevBtn.className = defaultClass;
+      currentBtn.className = selectedMiddleClass;
       currentBtn.removeAttribute('href');
+      nextBtn.className = defaultClass;
+    } else if (nextMonth === selectedMonth && nextYear === selectedYear) {
+      prevBtn.className = defaultClass;
+      currentBtn.className = middleDefaultClass;
+      nextBtn.className = selectedClass;
+      nextBtn.removeAttribute('href');
     } else {
-      currentBtn.className = "px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md font-medium";
-      currentBtn.href = `/holidays/employees/by-person?month=${displayMonth}&year=${displayYear}`;
+      // None of the visible buttons represent the selected month
+      prevBtn.className = defaultClass;
+      currentBtn.className = middleDefaultClass;
+      nextBtn.className = defaultClass;
     }
   }
   
