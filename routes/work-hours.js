@@ -21,28 +21,56 @@ const { prepareMessages } = require("../utils/messageUtils"); // Import message 
 const User = require("../models/User");
 
 // Helper function to get dates for the last 3 working days including weekend days in between
-const getValidDates = () => {
+const getValidDates = async () => {
   const today = new Date();
   const validDates = [];
   let currentDate = new Date(today);
   let workingDaysCount = 0;
 
-  // Add today regardless of whether it's a weekend
+  // Get public holidays for a broader date range (up to 3 months back to be safe)
+  const threeMonthsBack = new Date(today);
+  threeMonthsBack.setMonth(today.getMonth() - 3);
+  
+  // Get all public holidays that might affect our date range
+  const publicHolidaysData = [];
+  for (let monthOffset = 0; monthOffset <= 3; monthOffset++) {
+    const checkDate = new Date(today);
+    checkDate.setMonth(today.getMonth() - monthOffset);
+    const monthHolidays = await PublicHoliday.findByMonthAndYear(
+      checkDate.getMonth() + 1,
+      checkDate.getFullYear()
+    );
+    publicHolidaysData.push(...monthHolidays);
+  }
+
+  // Create a set of public holiday dates for quick lookup
+  const publicHolidayDates = new Set(
+    publicHolidaysData.map(holiday => formatDate(holiday.holiday_date))
+  );
+
+  // Check if today is a working day
+  const todayFormatted = formatDate(currentDate);
+  const isTodayWeekend = [0, 6].includes(currentDate.getDay());
+  const isTodayPublicHoliday = publicHolidayDates.has(todayFormatted);
+
+  // Add today regardless of whether it's a working day
   validDates.push({
     date: new Date(currentDate),
     label: "Dzisiaj",
-    formattedDate: formatDate(currentDate),
-    isWeekend: [0, 6].includes(currentDate.getDay()),
+    formattedDate: todayFormatted,
+    isWeekend: isTodayWeekend,
+    isPublicHoliday: isTodayPublicHoliday,
   });
 
-  if ([1, 2, 3, 4, 5].includes(currentDate.getDay())) {
-    workingDaysCount++; // Count today if it's a workday
+  // Count today if it's a working day (not weekend and not public holiday)
+  if (!isTodayWeekend && !isTodayPublicHoliday) {
+    workingDaysCount++;
   }
 
-  // Find dates up to the last 3 working days + weekends in between
+  // Find dates up to the last 3 working days + weekends/holidays in between
   let daysBack = 0;
-  while (workingDaysCount < 3 && daysBack < 14) {
-    // Safety limit of 14 days back
+  while (workingDaysCount < 3 && daysBack < 30) {
+    // Increased safety limit to 30 days back
     daysBack++;
 
     // Move to previous day
@@ -51,25 +79,28 @@ const getValidDates = () => {
 
     const dayOfWeek = previousDate.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // 0 = Sunday, 6 = Saturday
+    const previousDateFormatted = formatDate(previousDate);
+    const isPublicHoliday = publicHolidayDates.has(previousDateFormatted);
 
     // Create label based on position
     let label;
     if (daysBack === 1) {
       label = "Wczoraj";
     } else {
-      label = getDayOfWeekName(formatDate(previousDate));
+      label = getDayOfWeekName(previousDateFormatted);
     }
 
     // Add the date to our valid dates
     validDates.push({
       date: new Date(previousDate),
       label: label,
-      formattedDate: formatDate(previousDate),
+      formattedDate: previousDateFormatted,
       isWeekend: isWeekend,
+      isPublicHoliday: isPublicHoliday,
     });
 
-    // Count working days
-    if (!isWeekend) {
+    // Count working days (not weekend and not public holiday)
+    if (!isWeekend && !isPublicHoliday) {
       workingDaysCount++;
     }
   }
@@ -96,7 +127,7 @@ router.get("/", async (req, res) => {
   try {
     // Get authenticated user ID
     const userId = req.user.id;
-    const validDates = getValidDates(); // Get valid working dates
+    const validDates = await getValidDates(); // Get valid working dates
     const { dates, today } = validDates;
 
     // Get work hours for valid dates
@@ -272,7 +303,7 @@ router.get("/", async (req, res) => {
     });
   } catch (error) {
     console.error("Error loading work hours:", error);
-    const validDates = getValidDates();
+    const validDates = await getValidDates();
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
     const workDaysInMonth = getWeekdaysInMonth(currentYear, currentMonth);
@@ -317,7 +348,7 @@ router.post("/", async (req, res) => {
     // Get authenticated user ID
     const userId = req.user.id;
     const { work_date, total_hours_str } = req.body; // Get total_hours as string
-    const validDates = getValidDates(); // Get valid dates
+    const validDates = await getValidDates(); // Get valid dates
 
     // Extract valid formatted dates for validation
     const validFormattedDates = validDates.dates.map((d) => d.formattedDate);
@@ -365,7 +396,7 @@ router.post("/:id", async (req, res) => {
     const { id } = req.params;
     const { total_hours_str } = req.body; // Get total_hours as string for update
     const userId = req.user.id; // Get authenticated user ID
-    const validDates = getValidDates(); // Get valid dates
+    const validDates = await getValidDates(); // Get valid dates
 
     // Extract valid formatted dates for validation
     const validFormattedDates = validDates.dates.map((d) => d.formattedDate);
@@ -411,7 +442,7 @@ router.post("/:id/delete", async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id; // Get authenticated user ID
-    const validDates = getValidDates(); // Get valid dates
+    const validDates = await getValidDates(); // Get valid dates
 
     // Extract valid formatted dates for validation
     const validFormattedDates = validDates.dates.map((d) => d.formattedDate);

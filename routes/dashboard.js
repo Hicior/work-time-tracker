@@ -118,9 +118,15 @@ router.get("/", async (req, res) => {
       });
     }
 
-    // Convert groupMap to array and sort groups
+    // Convert groupMap to array and filter groups with active employees
     const groupedEmployees = Object.values(groupMap)
-      .filter((group) => group.employees.length > 0) // Only include groups with employees
+      .filter((group) => {
+        // Filter to only include groups with active employees (those with holidays or work hours)
+        const activeEmployees = group.employees.filter(emp => 
+          emp.holidays.length > 0 || emp.totalHours > 0
+        );
+        return activeEmployees.length > 0;
+      })
       .sort((a, b) => {
         // Sort "No Group" to the end
         if (a.id === 0) return 1;

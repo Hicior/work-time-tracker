@@ -21,23 +21,37 @@
     </div>
     <div class="flex items-center space-x-4">
       <!-- Month Navigation -->
-      <div class="flex items-center space-x-2">
-        <a href="/holidays/employees/by-person?month=<%= month === 1 ? 12 : month - 1 %>&year=<%= month === 1 ? year - 1 : year %>" 
-           class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
+      <div class="flex items-center space-x-1" id="monthNavigation" 
+           data-current-month="<%= month %>" data-current-year="<%= year %>">
+        <!-- Previous month button -->
+        <button onclick="navigateMonth(-1)" 
+                class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>
+        </button>
+        
+        <!-- Previous month -->
+        <a href="#" id="prevMonthBtn" 
+           class="px-3 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
         </a>
-        <div class="px-3 py-1 bg-blue-50 rounded-md border">
-          <span class="text-sm text-gray-500">Miesiąc:</span>
-          <span class="ml-1 font-medium"><%= month %>/<%= year %></span>
-        </div>
-        <a href="/holidays/employees/by-person?month=<%= month === 12 ? 1 : month + 1 %>&year=<%= month === 12 ? year + 1 : year %>" 
-           class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
+        
+        <!-- Current month -->
+        <a href="#" id="currentMonthBtn" class="px-3 py-2 text-sm rounded-md font-medium">
+        </a>
+        
+        <!-- Next month -->
+        <a href="#" id="nextMonthBtn" 
+           class="px-3 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
+        </a>
+        
+        <!-- Next month button -->
+        <button onclick="navigateMonth(1)" 
+                class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
           </svg>
-        </a>
+        </button>
       </div>
     </div>
   </div>
@@ -160,7 +174,7 @@
       <% } else { %>
       <% groupedEmployees.forEach((group, groupIndex) => { %>
         <!-- Each group in its own card -->
-        <div class="mb-6 shadow border-b border-gray-200 sm:rounded-lg">
+        <div class="mb-6 shadow border-b border-gray-200 sm:rounded-lg group-container" data-group-id="<%= group.id %>">
           <!-- Group header -->
           <div class="bg-gray-100 border-b border-gray-300 px-6 py-3 text-left text-sm font-medium">
             <div class="flex items-center justify-center">
@@ -265,7 +279,8 @@
                 <tr
                   class="employee-row <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %>"
                   data-name="<%= employee.name.toLowerCase() %>"
-                  data-email="<%= employee.email.toLowerCase() %>">
+                  data-email="<%= employee.email.toLowerCase() %>"
+                  data-group-id="<%= group.id %>">
                   <!-- Employee name (sticky) -->
                   <td
                     class="px-2 py-2 whitespace-nowrap truncate text-sm font-medium text-gray-900 sticky left-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10"
@@ -343,13 +358,74 @@
 </div>
 
 <script>
+  // Month navigation state
+  const selectedMonth = parseInt(document.getElementById('monthNavigation').dataset.currentMonth);
+  const selectedYear = parseInt(document.getElementById('monthNavigation').dataset.currentYear);
+  let displayMonth = selectedMonth;
+  let displayYear = selectedYear;
+  
+  function getMonthName(month, year) {
+    return new Date(year, month - 1, 1).toLocaleString('pl-PL', { month: 'short' });
+  }
+  
+  function updateMonthDisplay() {
+    const prevMonth = displayMonth === 1 ? 12 : displayMonth - 1;
+    const prevYear = displayMonth === 1 ? displayYear - 1 : displayYear;
+    const nextMonth = displayMonth === 12 ? 1 : displayMonth + 1;
+    const nextYear = displayMonth === 12 ? displayYear + 1 : displayYear;
+    
+    // Update button texts
+    document.getElementById('prevMonthBtn').textContent = getMonthName(prevMonth, prevYear) + ' ' + prevYear;
+    document.getElementById('currentMonthBtn').textContent = getMonthName(displayMonth, displayYear) + ' ' + displayYear;
+    document.getElementById('nextMonthBtn').textContent = getMonthName(nextMonth, nextYear) + ' ' + nextYear;
+    
+    // Update button links
+    document.getElementById('prevMonthBtn').href = `/holidays/employees/by-person?month=${prevMonth}&year=${prevYear}`;
+    document.getElementById('currentMonthBtn').href = `/holidays/employees/by-person?month=${displayMonth}&year=${displayYear}`;
+    document.getElementById('nextMonthBtn').href = `/holidays/employees/by-person?month=${nextMonth}&year=${nextYear}`;
+    
+    // Update styling - only selected month gets blue highlight
+    const currentBtn = document.getElementById('currentMonthBtn');
+    if (displayMonth === selectedMonth && displayYear === selectedYear) {
+      currentBtn.className = "px-3 py-2 text-sm bg-blue-500 text-white rounded-md font-medium cursor-default";
+      currentBtn.removeAttribute('href');
+    } else {
+      currentBtn.className = "px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md font-medium";
+      currentBtn.href = `/holidays/employees/by-person?month=${displayMonth}&year=${displayYear}`;
+    }
+  }
+  
+  function navigateMonth(direction) {
+    if (direction === -1) {
+      if (displayMonth === 1) {
+        displayMonth = 12;
+        displayYear--;
+      } else {
+        displayMonth--;
+      }
+    } else {
+      if (displayMonth === 12) {
+        displayMonth = 1;
+        displayYear++;
+      } else {
+        displayMonth++;
+      }
+    }
+    updateMonthDisplay();
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
+    // Initialize month display
+    updateMonthDisplay();
+    
     const searchInput = document.getElementById("employeeSearch");
     const employeeRows = document.querySelectorAll(".employee-row");
+    const groupContainers = document.querySelectorAll(".group-container");
 
-    searchInput.addEventListener("input", function () {
-      const searchTerm = this.value.toLowerCase().trim();
+    function updateVisibility() {
+      const searchTerm = searchInput.value.toLowerCase().trim();
 
+      // First, filter employee rows
       employeeRows.forEach((row) => {
         const name = row.dataset.name;
         const email = row.dataset.email;
@@ -360,12 +436,31 @@
           row.style.display = "none";
         }
       });
-    });
+
+      // Then, hide/show groups based on visible employees
+      groupContainers.forEach((groupContainer) => {
+        const groupId = groupContainer.dataset.groupId;
+        const groupEmployeeRows = document.querySelectorAll(`.employee-row[data-group-id="${groupId}"]`);
+        
+        // Check if any employee in this group is visible
+        const hasVisibleEmployees = Array.from(groupEmployeeRows).some(row => 
+          row.style.display !== "none"
+        );
+
+        if (hasVisibleEmployees) {
+          groupContainer.style.display = "";
+        } else {
+          groupContainer.style.display = "none";
+        }
+      });
+    }
+
+    searchInput.addEventListener("input", updateVisibility);
 
     // Clear search when clicking the X button (for browsers that support it)
     searchInput.addEventListener("search", function () {
       if (this.value === "") {
-        this.dispatchEvent(new Event("input"));
+        updateVisibility();
       }
     });
   });
