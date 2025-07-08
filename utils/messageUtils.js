@@ -44,6 +44,10 @@ const messageMap = {
     work_hours_conflict:
       "Nie można dodać urlopu dla dnia, w którym masz już wpisane godziny pracy.",
     holiday_not_found: "Nie znaleziono urlopu.",
+    weekend_not_allowed: "Nie można ustawić urlopu w weekend.",
+    public_holiday_not_allowed: "Nie można ustawić urlopu w dzień ustawowo wolny.",
+    weekend_only: "Wybrany zakres zawiera tylko weekendy.",
+    no_valid_days: "Wybrany zakres nie zawiera żadnych dni roboczych (wykluczono weekendy i dni ustawowo wolne).",
 
     // Work hours-specific errors
     holiday: "Nie można dodać wpisu w dzień urlopowy.",
@@ -76,12 +80,38 @@ const prepareMessages = (messages) => {
     // Check for added_X_days format (for multi-day holiday additions)
     if (
       messages.success.startsWith("added_") &&
-      messages.success.endsWith("_days")
+      messages.success.includes("_days")
     ) {
-      const daysCount = messages.success
-        .replace("added_", "")
-        .replace("_days", "");
-      result.success = `Pomyślnie dodano ${daysCount} dni urlopowych.`;
+      let messageText = "";
+      
+      if (messages.success.includes("_weekends_and_holidays_excluded")) {
+        const daysCount = messages.success
+          .replace("added_", "")
+          .replace("_days_weekends_and_holidays_excluded", "");
+        messageText = `Pomyślnie dodano ${daysCount} dni urlopowych. Pominięto weekendy i dni ustawowo wolne.`;
+      } else if (messages.success.includes("_holidays_excluded")) {
+        const daysCount = messages.success
+          .replace("added_", "")
+          .replace("_days_holidays_excluded", "");
+        messageText = `Pomyślnie dodano ${daysCount} dni urlopowych. Pominięto dni ustawowo wolne.`;
+      } else if (messages.success.includes("_weekends_excluded")) {
+        const daysCount = messages.success
+          .replace("added_", "")
+          .replace("_days_weekends_excluded", "");
+        messageText = `Pomyślnie dodano ${daysCount} dni urlopowych. Pominięto weekendy.`;
+      } else {
+        const daysCount = messages.success
+          .replace("added_", "")
+          .replace("_days", "");
+        messageText = `Pomyślnie dodano ${daysCount} dni urlopowych.`;
+      }
+      result.success = messageText;
+    } else if (messages.success === "added_weekends_and_holidays_excluded") {
+      result.success = "Pomyślnie dodano urlop. Pominięto weekendy i dni ustawowo wolne.";
+    } else if (messages.success === "added_holidays_excluded") {
+      result.success = "Pomyślnie dodano urlop. Pominięto dni ustawowo wolne.";
+    } else if (messages.success === "added_weekends_excluded") {
+      result.success = "Pomyślnie dodano urlop. Pominięto weekendy.";
     } else {
       result.success = messageMap.success[messages.success] || messages.success;
     }

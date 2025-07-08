@@ -33,7 +33,7 @@
       <h3 class="text-lg font-medium text-gray-900 mb-4">
         Dodaj przyszły urlop
       </h3>
-      <form action="/holidays" method="POST" class="space-y-4">
+      <form id="holiday-form" action="/holidays" method="POST" class="space-y-4" data-public-holidays='<%= JSON.stringify(publicHolidays.map(ph => ph.holiday_date)) %>'>
         <div>
           <label
             for="start_date"
@@ -130,6 +130,10 @@
     const startDateInput = document.getElementById("start_date");
     const endDateInput = document.getElementById("end_date");
 
+    // Get public holidays from server data (passed via data attribute)
+    const publicHolidaysData = document.getElementById('holiday-form');
+    const publicHolidays = publicHolidaysData ? JSON.parse(publicHolidaysData.getAttribute('data-public-holidays') || '[]') : [];
+
     // Set tomorrow as the default start date
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -143,13 +147,64 @@
     const today = new Date().toISOString().split("T")[0];
     startDateInput.min = tomorrowStr;
 
-    // Set minimum date for end date based on start date
+    // Function to check if a date is a public holiday
+    function isPublicHoliday(dateStr) {
+      return publicHolidays.includes(dateStr);
+    }
+
+    // Function to show public holiday warning
+    function showPublicHolidayWarning(input, dateStr) {
+      // Remove existing warning
+      const existingWarning = input.parentNode.querySelector('.public-holiday-warning');
+      if (existingWarning) {
+        existingWarning.remove();
+      }
+
+      // Add warning message
+      const warning = document.createElement('p');
+      warning.className = 'public-holiday-warning mt-1 text-sm text-red-600';
+      warning.textContent = 'Ta data jest dniem ustawowo wolnym. Nie można ustawić urlopu.';
+      input.parentNode.appendChild(warning);
+    }
+
+    // Function to hide public holiday warning
+    function hidePublicHolidayWarning(input) {
+      const existingWarning = input.parentNode.querySelector('.public-holiday-warning');
+      if (existingWarning) {
+        existingWarning.remove();
+      }
+    }
+
+    // Validate start date
     startDateInput.addEventListener("change", function () {
+      const selectedDate = startDateInput.value;
+      
+      if (isPublicHoliday(selectedDate)) {
+        showPublicHolidayWarning(startDateInput, selectedDate);
+        startDateInput.setCustomValidity('Nie można wybrać dnia ustawowo wolnego');
+      } else {
+        hidePublicHolidayWarning(startDateInput);
+        startDateInput.setCustomValidity('');
+      }
+
       endDateInput.min = startDateInput.value;
 
       // If end date is before start date, reset it
       if (endDateInput.value && endDateInput.value < startDateInput.value) {
         endDateInput.value = startDateInput.value;
+      }
+    });
+
+    // Validate end date
+    endDateInput.addEventListener("change", function () {
+      const selectedDate = endDateInput.value;
+      
+      if (selectedDate && isPublicHoliday(selectedDate)) {
+        showPublicHolidayWarning(endDateInput, selectedDate);
+        endDateInput.setCustomValidity('Nie można wybrać dnia ustawowo wolnego');
+      } else {
+        hidePublicHolidayWarning(endDateInput);
+        endDateInput.setCustomValidity('');
       }
     });
 

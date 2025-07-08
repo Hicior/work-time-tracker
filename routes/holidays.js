@@ -22,17 +22,24 @@ const {
 const { prepareMessages } = require("../utils/messageUtils");
 
 // Helper function to generate dates between start and end date (inclusive)
-const generateDateRange = (startDate, endDate) => {
+const generateDateRange = (startDate, endDate, publicHolidays = []) => {
   const dates = [];
   const currentDate = new Date(startDate);
   const lastDate = new Date(endDate);
 
+  // Create a Set of public holiday dates for faster lookup
+  const publicHolidayDates = new Set(
+    publicHolidays.map(ph => formatDate(ph.holiday_date))
+  );
+
   // Add dates until we reach the end date
   while (currentDate <= lastDate) {
     const dayOfWeek = currentDate.getDay();
-    // Skip weekends (0 = Sunday, 6 = Saturday)
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-      dates.push(formatDate(new Date(currentDate)));
+    const currentDateStr = formatDate(new Date(currentDate));
+    
+    // Skip weekends (0 = Sunday, 6 = Saturday) and public holidays
+    if (dayOfWeek !== 0 && dayOfWeek !== 6 && !publicHolidayDates.has(currentDateStr)) {
+      dates.push(currentDateStr);
     }
     currentDate.setDate(currentDate.getDate() + 1);
   }
@@ -66,9 +73,21 @@ router.get("/", async (req, res) => {
   try {
     // Get authenticated user ID
     const userId = req.user.id;
-    const { year, month, firstDay, lastDay } = getCurrentMonthInfo();
+    
+    // Get month and year from query parameters or use current month
+    const queryMonth = parseInt(req.query.month) || new Date().getMonth() + 1;
+    const queryYear = parseInt(req.query.year) || new Date().getFullYear();
+    
+    // Validate month and year
+    const month = Math.max(1, Math.min(12, queryMonth));
+    const year = Math.max(2020, Math.min(2030, queryYear)); // Reasonable year range
+    
+    // Get date range for the specified month
+    const { startDate, endDate } = getMonthDateRange(year, month);
+    const firstDay = startDate;
+    const lastDay = endDate;
 
-    // Get holidays for the current month
+    // Get holidays for the selected month
     const holidays = await Holiday.findByUserAndDateRange(
       userId,
       firstDay,
@@ -80,11 +99,17 @@ router.get("/", async (req, res) => {
       holiday.holiday_date = formatDateForDisplay(holiday.holiday_date);
     });
 
-    // Get public holidays for the current month
+    // Get public holidays for the selected month
     const rawPublicHolidays = await PublicHoliday.findByMonthAndYear(
       month,
       year
     );
+
+    // Get public holidays for broader date range (for client-side validation)
+    const currentYear = new Date().getFullYear();
+    const publicHolidaysCurrentYear = await PublicHoliday.findByYear(currentYear);
+    const publicHolidaysNextYear = await PublicHoliday.findByYear(currentYear + 1);
+    const allPublicHolidays = [...publicHolidaysCurrentYear, ...publicHolidaysNextYear];
 
     // Create a version for display formatting to be passed to the template
     const displayPublicHolidays = rawPublicHolidays.map((h) => ({
@@ -137,6 +162,7 @@ router.get("/", async (req, res) => {
       currentPage: "holidays",
       holidays,
       publicHolidays: displayPublicHolidays, // Pass the display-formatted list
+      publicHolidaysRaw: allPublicHolidays, // Pass broader range of public holidays for client-side validation
       month,
       year,
       stats: {
@@ -157,7 +183,9 @@ router.get("/", async (req, res) => {
     });
   } catch (error) {
     console.error("Error loading holidays:", error);
-    const { year, month } = getCurrentMonthInfo(); // Get current month/year for error case
+    // Get month and year from query parameters or use current month for error case
+    const month = Math.max(1, Math.min(12, parseInt(req.query.month) || new Date().getMonth() + 1));
+    const year = Math.max(2020, Math.min(2030, parseInt(req.query.year) || new Date().getFullYear()));
     const workDaysInMonth = getWeekdaysInMonth(year, month);
     const requiredMonthlyHours = workDaysInMonth * 8;
 
@@ -166,6 +194,7 @@ router.get("/", async (req, res) => {
       currentPage: "holidays",
       holidays: [],
       publicHolidays: [],
+      publicHolidaysRaw: [], // Pass empty array for broader public holidays in error case
       month,
       year,
       stats: {
@@ -209,12 +238,24 @@ router.post("/", async (req, res) => {
     // If end_date is not provided, use start_date as the end date (single day)
     const actualEndDate = end_date || start_date;
 
-    // Generate all dates in the range (weekends are automatically excluded)
-    const holidayDates = generateDateRange(start_date, actualEndDate);
+    // Get public holidays for the date range
+    const publicHolidays = await PublicHoliday.findByDateRange(start_date, actualEndDate);
 
-    // Check if any dates were generated (might be empty if only weekend days)
+    // Check if start date is a public holiday
+    const startDateFormatted = formatDate(start_date);
+    const isStartDatePublicHoliday = publicHolidays.some(
+      ph => formatDate(ph.holiday_date) === startDateFormatted
+    );
+    if (isStartDatePublicHoliday) {
+      return res.redirect("/holidays?error=public_holiday_not_allowed");
+    }
+
+    // Generate all dates in the range (weekends and public holidays are automatically excluded)
+    const holidayDates = generateDateRange(start_date, actualEndDate, publicHolidays);
+
+    // Check if any dates were generated (might be empty if only weekend days or public holidays)
     if (holidayDates.length === 0) {
-      return res.redirect("/holidays?error=weekend_only");
+      return res.redirect("/holidays?error=no_valid_days");
     }
 
     // Create holiday entries for each date in the range
@@ -228,14 +269,41 @@ router.post("/", async (req, res) => {
     const daysCount = holidayDates.length;
     let successMessage = daysCount > 1 ? `added_${daysCount}_days` : "added";
 
-    // Check if date range includes weekends to inform the user
+    // Check if date range includes weekends or public holidays to inform the user
     const startObj = new Date(start_date);
     const endObj = new Date(actualEndDate);
-    const dayCount =
+    const totalDayCount =
       Math.round((endObj - startObj) / (1000 * 60 * 60 * 24)) + 1;
 
-    if (dayCount > daysCount) {
-      successMessage += "_weekends_excluded";
+    if (totalDayCount > daysCount) {
+      const excludedDays = totalDayCount - daysCount;
+      const weekendsAndPublicHolidays = [];
+      
+      // Check for weekends and public holidays in the excluded days
+      let hasWeekends = false;
+      let hasPublicHolidays = false;
+      
+      for (let i = 0; i < totalDayCount; i++) {
+        const checkDate = new Date(startObj);
+        checkDate.setDate(startObj.getDate() + i);
+        const dayOfWeek = checkDate.getDay();
+        const checkDateStr = formatDate(checkDate);
+        
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          hasWeekends = true;
+        }
+        if (publicHolidays.some(ph => formatDate(ph.holiday_date) === checkDateStr)) {
+          hasPublicHolidays = true;
+        }
+      }
+      
+      if (hasWeekends && hasPublicHolidays) {
+        successMessage += "_weekends_and_holidays_excluded";
+      } else if (hasWeekends) {
+        successMessage += "_weekends_excluded";
+      } else if (hasPublicHolidays) {
+        successMessage += "_holidays_excluded";
+      }
     }
 
     res.redirect(`/holidays?success=${successMessage}`);
@@ -348,10 +416,17 @@ router.get("/future", async (req, res) => {
       holiday.holiday_date = formatDateForDisplay(holiday.holiday_date);
     });
 
+    // Get public holidays for the next 2 years (for future date validation)
+    const currentYear = new Date().getFullYear();
+    const publicHolidaysCurrentYear = await PublicHoliday.findByYear(currentYear);
+    const publicHolidaysNextYear = await PublicHoliday.findByYear(currentYear + 1);
+    const publicHolidays = [...publicHolidaysCurrentYear, ...publicHolidaysNextYear];
+
     res.render("holidays/future", {
       title: "Planowane urlopy",
       currentPage: "holidays",
       futureHolidays,
+      publicHolidays,
       isAuthenticated: req.oidc.isAuthenticated(),
       user: req.oidc.user,
       dbUser: req.user, // Pass database user
@@ -363,6 +438,7 @@ router.get("/future", async (req, res) => {
       title: "Planowane urlopy",
       currentPage: "holidays",
       futureHolidays: [],
+      publicHolidays: [],
       isAuthenticated: req.oidc.isAuthenticated(),
       user: req.oidc.user,
       dbUser: req.user, // Pass database user

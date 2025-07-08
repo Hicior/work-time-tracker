@@ -254,11 +254,48 @@
 
   <!-- Monthly Calendar View -->
   <div class="mt-8 bg-gray-50 rounded-lg p-6">
-    <h3 class="text-lg font-medium text-gray-900 mb-4">
-      Przegląd miesięczny - 
-      <%= ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 
-           'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'][currentMonth] %> <%= currentYear %>
-    </h3>
+    <div class="flex justify-between items-center mb-6">
+      <h3 class="text-lg font-medium text-gray-900">
+        Przegląd miesięczny - 
+        <%= ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 
+             'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'][currentMonth] %> <%= currentYear %>
+      </h3>
+      <div class="flex items-center space-x-4">
+        <!-- Month Navigation -->
+        <div class="flex items-center space-x-1" id="monthNavigation" 
+             data-current-month="<%= currentMonth %>" data-current-year="<%= currentYear %>">
+          <!-- Previous month button -->
+          <button onclick="navigateMonth(-1)" 
+                  class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          
+          <!-- Previous month -->
+          <a href="#" id="prevMonthBtn" 
+             class="px-3 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
+          </a>
+          
+          <!-- Current month -->
+          <a href="#" id="currentMonthBtn" class="px-3 py-2 text-sm rounded-md font-medium">
+          </a>
+          
+          <!-- Next month -->
+          <a href="#" id="nextMonthBtn" 
+             class="px-3 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
+          </a>
+          
+          <!-- Next month button -->
+          <button onclick="navigateMonth(1)" 
+                  class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
     
     <div class="grid grid-cols-7 gap-2 mb-3">
       <!-- Week day headers -->
@@ -438,5 +475,88 @@
     if (hoursInput) {
       hoursInput.addEventListener("blur", validateHoursInput);
     }
+    
+    // Initialize month navigation
+    updateMonthDisplay();
   });
+
+  // Month navigation functionality
+  const selectedMonth = parseInt(document.getElementById('monthNavigation').dataset.currentMonth);
+  const selectedYear = parseInt(document.getElementById('monthNavigation').dataset.currentYear);
+  let displayMonth = selectedMonth;
+  let displayYear = selectedYear;
+  
+  function getMonthName(month, year) {
+    return new Date(year, month - 1, 1).toLocaleString('pl-PL', { month: 'short' });
+  }
+  
+  function updateMonthDisplay() {
+    const prevMonth = displayMonth === 1 ? 12 : displayMonth - 1;
+    const prevYear = displayMonth === 1 ? displayYear - 1 : displayYear;
+    const nextMonth = displayMonth === 12 ? 1 : displayMonth + 1;
+    const nextYear = displayMonth === 12 ? displayYear + 1 : displayYear;
+    
+    // Update button texts
+    document.getElementById('prevMonthBtn').textContent = getMonthName(prevMonth, prevYear) + ' ' + prevYear;
+    document.getElementById('currentMonthBtn').textContent = getMonthName(displayMonth, displayYear) + ' ' + displayYear;
+    document.getElementById('nextMonthBtn').textContent = getMonthName(nextMonth, nextYear) + ' ' + nextYear;
+    
+    // Update button links
+    document.getElementById('prevMonthBtn').href = `/work-hours?month=${prevMonth}&year=${prevYear}`;
+    document.getElementById('currentMonthBtn').href = `/work-hours?month=${displayMonth}&year=${displayYear}`;
+    document.getElementById('nextMonthBtn').href = `/work-hours?month=${nextMonth}&year=${nextYear}`;
+    
+    // Update styling - highlight whichever button represents the actually selected month
+    const prevBtn = document.getElementById('prevMonthBtn');
+    const currentBtn = document.getElementById('currentMonthBtn');
+    const nextBtn = document.getElementById('nextMonthBtn');
+    
+    // Reset all buttons to default styling
+    const defaultClass = "px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md font-medium";
+    const middleDefaultClass = "px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md font-bold";
+    const selectedClass = "px-3 py-2 text-sm bg-blue-500 text-white rounded-md font-medium cursor-default";
+    const selectedMiddleClass = "px-3 py-2 text-sm bg-blue-500 text-white rounded-md font-bold cursor-default";
+    
+    // Check which button represents the selected month and highlight it
+    if (prevMonth === selectedMonth && prevYear === selectedYear) {
+      prevBtn.className = selectedClass;
+      prevBtn.removeAttribute('href');
+      currentBtn.className = middleDefaultClass;
+      nextBtn.className = defaultClass;
+    } else if (displayMonth === selectedMonth && displayYear === selectedYear) {
+      prevBtn.className = defaultClass;
+      currentBtn.className = selectedMiddleClass;
+      currentBtn.removeAttribute('href');
+      nextBtn.className = defaultClass;
+    } else if (nextMonth === selectedMonth && nextYear === selectedYear) {
+      prevBtn.className = defaultClass;
+      currentBtn.className = middleDefaultClass;
+      nextBtn.className = selectedClass;
+      nextBtn.removeAttribute('href');
+    } else {
+      // None of the visible buttons represent the selected month
+      prevBtn.className = defaultClass;
+      currentBtn.className = middleDefaultClass;
+      nextBtn.className = defaultClass;
+    }
+  }
+  
+  function navigateMonth(direction) {
+    if (direction === -1) {
+      if (displayMonth === 1) {
+        displayMonth = 12;
+        displayYear--;
+      } else {
+        displayMonth--;
+      }
+    } else {
+      if (displayMonth === 12) {
+        displayMonth = 1;
+        displayYear++;
+      } else {
+        displayMonth++;
+      }
+    }
+    updateMonthDisplay();
+  }
 </script>

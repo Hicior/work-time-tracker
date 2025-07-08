@@ -16,6 +16,7 @@ const {
   getDayOfWeekAbbr,
   formatDateForDisplay, // Import the new date formatting function
   formatDate,
+  getMonthDateRange,
 } = require("../utils/dateUtils"); // Import the helper functions
 const { prepareMessages } = require("../utils/messageUtils"); // Import message utility
 const User = require("../models/User");
@@ -152,12 +153,15 @@ router.get("/", async (req, res) => {
     // Check if today is a holiday (still relevant for displaying message)
     const isHolidayToday = await Holiday.isHoliday(userId, today);
 
-    // Get current month's stats for display
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth() + 1;
-    const currentYear = currentDate.getFullYear();
+    // Get month and year from query parameters or use current month
+    const queryMonth = parseInt(req.query.month) || new Date().getMonth() + 1;
+    const queryYear = parseInt(req.query.year) || new Date().getFullYear();
+    
+    // Validate month and year
+    const currentMonth = Math.max(1, Math.min(12, queryMonth));
+    const currentYear = Math.max(2020, Math.min(2030, queryYear)); // Reasonable year range
 
-    // Get public holidays for the current month
+    // Get public holidays for the selected month
     const publicHolidays = await PublicHoliday.findByMonthAndYear(
       currentMonth,
       currentYear
@@ -170,11 +174,9 @@ router.get("/", async (req, res) => {
       return dayOfWeek !== 0 && dayOfWeek !== 6; // 0 = Sunday, 6 = Saturday
     });
 
-    // Get all work hours for the current month (for calendar view)
+    // Get all work hours for the selected month (for calendar view)
+    const { startDate, endDate } = getMonthDateRange(currentYear, currentMonth);
     const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-    const formattedMonth = currentMonth.toString().padStart(2, "0");
-    const startDate = `${currentYear}-${formattedMonth}-01`;
-    const endDate = `${currentYear}-${formattedMonth}-${daysInMonth}`;
     
     const monthlyWorkHours = await WorkHours.findByUserAndDateRange(
       userId,
@@ -182,7 +184,7 @@ router.get("/", async (req, res) => {
       endDate
     );
 
-    // Get holidays for the current month
+    // Get holidays for the selected month
     const monthlyHolidays = await Holiday.findByUserAndDateRange(
       userId,
       startDate,
@@ -214,6 +216,7 @@ router.get("/", async (req, res) => {
     // Generate calendar data for each day of the month
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0); // Reset time to compare dates only
+    const formattedMonth = currentMonth.toString().padStart(2, "0");
     
     for (let day = 1; day <= daysInMonth; day++) {
       const dayStr = day.toString().padStart(2, "0");
@@ -321,8 +324,8 @@ router.get("/", async (req, res) => {
       publicHolidays: [], // Empty array in error case
       publicHolidaysOnWorkdays: [], // Empty array in error case
       calendarData: [], // Empty calendar data in error case
-      currentMonth: new Date().getMonth() + 1,
-      currentYear: new Date().getFullYear(),
+      currentMonth: Math.max(1, Math.min(12, parseInt(req.query.month) || new Date().getMonth() + 1)),
+      currentYear: Math.max(2020, Math.min(2030, parseInt(req.query.year) || new Date().getFullYear())),
       monthStats: {
         totalWorkHours: 0,
         holidayCount: 0,

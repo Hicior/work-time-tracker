@@ -85,6 +85,20 @@ class PublicHoliday {
     }
   }
 
+  // Find public holidays by date range
+  static async findByDateRange(startDate, endDate) {
+    try {
+      const rows = await dbAsync.all(
+        "SELECT * FROM public_holidays WHERE holiday_date BETWEEN $1 AND $2 ORDER BY holiday_date ASC",
+        [startDate, endDate]
+      );
+      return rows.map((row) => new PublicHoliday(row));
+    } catch (error) {
+      console.error("Error finding public holidays by date range:", error);
+      throw error;
+    }
+  }
+
   // Find public holiday by ID
   static async findById(id) {
     try {
