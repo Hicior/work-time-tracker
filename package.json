@@ -19,7 +19,7 @@
   "license": "ISC",
   "dependencies": {
     "@tailwindcss/cli": "^4.1.4",
-    "concurrently": "^8.2.2",
+    "axios": "^1.4.0",
     "dotenv": "^16.5.0",
     "ejs": "^3.1.9",
     "ejs-mate": "^4.0.0",
@@ -27,10 +27,11 @@
     "express-openid-connect": "^2.18.0",
     "pg": "^8.11.3",
     "pg-types": "^4.0.2",
-    "tailwindcss": "^4.1.4",
-    "axios": "^1.4.0"
+    "tailwindcss": "^4.1.4"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
+    "exceljs": "^4.4.0",
     "nodemon": "^3.1.10"
   }
 }

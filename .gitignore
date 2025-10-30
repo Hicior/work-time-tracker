@@ -39,6 +39,8 @@ Thumbs.db
 *.log
 docs/
 scripts/
+*.xlsx
+!README.md
 
 ## Tailwind CSS
 public/css/output.css

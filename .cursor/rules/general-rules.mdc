@@ -1,0 +1,26 @@
+---
+alwaysApply: true
+---
+
+## Rules
+
+- Use dateUtils.js functions for all date formatting and manipulation; always use formatDate for database operations, formatDateTimeForDisplay for user-facing timestamps, and getMonthDateRange for month date range calculations.
+
+## Technologies
+
+- HTML/CSS/JS
+- EJS
+- Express
+- PostgreSQL
+- Tailwind CSS
+
+## APP look
+
+- App should be focused on User experience
+- Clean and simple look
+- Use Tailwind CSS for styling
+
+## Ignore specific errors
+
+- Ignore error regarding this line: style="<%= progressStyle %>"
+- Ignore error in holidays/index.ejs regarding style attribute formatting (Line 74: } expected)

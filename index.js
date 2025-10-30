@@ -9,6 +9,11 @@ const path = require("path");
 const ejsMate = require("ejs-mate");
 const { auth } = require("express-openid-connect");
 require("dotenv").config();
+
+// Validate environment variables before starting the application
+const { validateEnvironmentVariables } = require("./utils/envValidator");
+validateEnvironmentVariables();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const User = require("./models/User");
@@ -323,7 +328,51 @@ const initializeDb = async () => {
 };
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   initializeDb();
+});
+
+// Graceful shutdown handling
+const gracefulShutdown = async (signal) => {
+  console.log(`\n${signal} signal received: closing HTTP server`);
+  
+  // Stop accepting new connections
+  server.close(async () => {
+    console.log('HTTP server closed');
+    
+    // Close database connection pool
+    try {
+      const { pool } = require('./db/database');
+      await pool.end();
+      console.log('Database connection pool closed');
+    } catch (error) {
+      console.error('Error closing database pool:', error);
+    }
+    
+    console.log('Graceful shutdown completed');
+    process.exit(0);
+  });
+  
+  // Force shutdown after 10 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
+};
+
+// Listen for termination signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('UNHANDLED_REJECTION');
 });
