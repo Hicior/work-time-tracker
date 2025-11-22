@@ -15,6 +15,8 @@ function validateEnvironmentVariables() {
     'AUTH0_BASE_URL',
     'AUTH0_CLIENT_ID',
     'AUTH0_DOMAIN',
+    'AUTH0_MANAGEMENT_CLIENT_ID',
+    'AUTH0_MANAGEMENT_CLIENT_SECRET',
   ];
 
   const missingVars = [];

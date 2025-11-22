@@ -7,7 +7,10 @@
 const express = require("express");
 const path = require("path");
 const ejsMate = require("ejs-mate");
+const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
 const { auth } = require("express-openid-connect");
+const { authLimiter, apiLimiter } = require("./utils/rateLimiter");
 require("dotenv").config();
 
 // Validate environment variables before starting the application
@@ -15,6 +18,30 @@ const { validateEnvironmentVariables } = require("./utils/envValidator");
 validateEnvironmentVariables();
 
 const app = express();
+
+// Trust proxy - required for Auth0 to work correctly behind Render's proxy
+// This allows Express to properly detect HTTPS via X-Forwarded-Proto header
+app.set('trust proxy', 1);
+
+// Security headers middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Required for Tailwind CSS
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https:"], // Required for Auth0
+      fontSrc: ["'self'", "data:"],
+    },
+  },
+}));
+
+// Rate limiting middleware - protect auth and API endpoints from abuse
+app.use('/login', authLimiter);
+app.use('/callback', authLimiter);
+app.use('/admin-api', apiLimiter);
+
 const PORT = process.env.PORT || 3000;
 const User = require("./models/User");
 const Group = require("./models/Group");
@@ -37,6 +64,8 @@ app.use(auth(config));
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+// Parse signed cookies for CSRF double-submit cookie pattern
+app.use(cookieParser(process.env.CSRF_COOKIE_SECRET || process.env.AUTH0_SECRET));
 app.use(express.static(path.join(__dirname, "public")));
 
 // Set view engine
@@ -52,6 +81,13 @@ const publicHolidaysRoutes = require("./routes/public-holidays");
 const dashboardRoutes = require("./routes/dashboard");
 const adminApiRoutes = require("./routes/admin-api");
 
+// CSRF protection
+const { setCsrfToken, verifyCsrf, csrfErrorHandler } = require("./utils/csrf");
+// Expose token on safe methods for views
+app.use(setCsrfToken);
+// Verify token for all unsafe methods globally
+app.use(verifyCsrf);
+
 // Auth middleware
 const requireAuth = async (req, res, next) => {
   if (!req.oidc.isAuthenticated()) {
@@ -61,6 +97,18 @@ const requireAuth = async (req, res, next) => {
   try {
     // Get or create user in our database
     const user = await User.createFromAuth0(req.oidc.user);
+
+    // Check if user is blocked
+    if (user.is_blocked) {
+      console.warn(`Blocked user attempted access: ${user.email} (${user.auth0_id})`);
+      // Log out the user and redirect to blocked page
+      req.logout();
+      return res.render("blocked", {
+        title: "Konto Zablokowane",
+        isAuthenticated: false,
+        user: null,
+      });
+    }
 
     // Add user to the request object
     req.user = user;
@@ -79,7 +127,7 @@ const requireAuth = async (req, res, next) => {
 
 // Admin role check middleware
 const requireAdmin = async (req, res, next) => {
-  if (!req.user || !req.user.isAdmin()) {
+  if (!req.user || req.user.is_blocked || !req.user.isAdmin()) {
     return res.status(403).render("error", {
       title: "Dostęp zabroniony",
       message: "Ta sekcja wymaga uprawnień administratora",
@@ -92,7 +140,7 @@ const requireAdmin = async (req, res, next) => {
 
 // Manager role check middleware
 const requireManager = async (req, res, next) => {
-  if (!req.user || !req.user.hasElevatedPermissions()) {
+  if (!req.user || req.user.is_blocked || !req.user.hasElevatedPermissions()) {
     return res.status(403).render("error", {
       title: "Dostęp zabroniony",
       message: "Ta sekcja wymaga uprawnień menedżera lub administratora",
@@ -296,6 +344,40 @@ app.use(
   publicHolidaysRoutes
 );
 app.use("/admin-api", requireAuth, requireManager, adminApiRoutes);
+
+// CSRF error handler must be after routes
+app.use(csrfErrorHandler);
+
+// Global error handler middleware - catches all unhandled errors
+app.use((err, req, res, next) => {
+  // Log error for monitoring
+  console.error('Unhandled error:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    ip: req.ip,
+  });
+
+  // Determine if we should expose error details (only in development)
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
+  // Get HTTP status code from error or default to 500
+  const statusCode = err.status || err.statusCode || 500;
+
+  // Safely check authentication state
+  const isAuthenticated = req.oidc && req.oidc.isAuthenticated();
+  const user = req.oidc && req.oidc.user ? req.oidc.user : null;
+
+  // Render error page with sanitized error data
+  res.status(statusCode).render('error', {
+    title: 'Błąd',
+    message: 'Wystąpił błąd podczas przetwarzania żądania.',
+    error: isDevelopment ? err : null, // Only expose error details in development
+    isAuthenticated: isAuthenticated,
+    user: user,
+  });
+});
 
 // Create work-hours directory if it doesn't exist
 const fs = require("fs");
