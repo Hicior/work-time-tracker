@@ -8,11 +8,11 @@ require("dotenv").config();
 const pgTypes = require("pg-types");
 
 // Create database connection pool
-// Enable SSL for all environments with certificate validation
-// This protects against man-in-the-middle attacks in all environments
+// Enable SSL with relaxed validation for production databases (managed services often use self-signed certs)
+// Connection is still encrypted, but accepts certificates that would otherwise be rejected
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: true },
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
   max: 50, // Maximum pool size
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
   connectionTimeoutMillis: 10000, // Return error after 10 seconds if connection cannot be established
