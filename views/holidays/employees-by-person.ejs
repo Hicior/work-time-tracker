@@ -24,7 +24,7 @@
       <div class="flex items-center space-x-1" id="monthNavigation" 
            data-current-month="<%= month %>" data-current-year="<%= year %>">
         <!-- Previous month button -->
-        <button onclick="navigateMonth(-1)" 
+        <button id="navigatePrevMonth" 
                 class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -46,7 +46,7 @@
         </a>
         
         <!-- Next month button -->
-        <button onclick="navigateMonth(1)" 
+        <button id="navigateNextMonth" 
                 class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -96,10 +96,10 @@
       </h3>
       <div class="mt-2 md:mt-0 flex items-center space-x-4">
         <div
-          class="text-sm font-medium text-gray-700 bg-blue-50 rounded-lg px-3 py-1.5 border border-blue-100 flex items-center">
+          class="text-sm font-medium bg-red-50 rounded-lg px-3 py-1.5 border border-red-100 flex items-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4 mr-1 text-blue-500"
+            class="h-4 w-4 mr-1 text-red-500"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor">
@@ -109,9 +109,23 @@
               stroke-width="2"
               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <span class="font-bold text-blue-600"
-            ><%= totalEmployeesWithHolidays %></span
-          >
+          <span class="font-bold text-red-600"><%= totalEmployeesWithHolidays %></span>
+        </div>
+        <div
+          class="text-sm font-medium bg-cyan-50 rounded-lg px-3 py-1.5 border border-cyan-100 flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 mr-1 text-cyan-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span class="font-bold text-cyan-600"><%= totalEmployeesWithRemoteWork %></span>
         </div>
       </div>
     </div>
@@ -123,7 +137,16 @@
       </div>
       <div class="flex items-center p-2 rounded">
         <div
-          class="w-6 h-6 bg-red-100 mr-2 rounded border border-red-200"></div>
+          class="w-6 h-6 bg-cyan-100 mr-2 rounded border border-cyan-200 flex items-center justify-center">
+          <span class="text-xs font-bold text-cyan-600">z</span>
+        </div>
+        <span class="text-sm font-medium text-gray-700">Praca zdalnie</span>
+      </div>
+      <div class="flex items-center p-2 rounded">
+        <div
+          class="w-6 h-6 bg-red-100 mr-2 rounded border border-red-200 flex items-center justify-center">
+          <span class="text-xs font-bold text-red-300">u</span>
+        </div>
         <span class="text-sm font-medium text-gray-700">Urlop</span>
       </div>
       <div class="flex items-center p-2 rounded">
@@ -139,8 +162,33 @@
     </div>
   </div>
 
-  <!-- Search bar -->
+  <!-- Search bar and filters -->
   <div class="mb-6 bg-white p-5 rounded-lg shadow border border-gray-100">
+    <div class="mb-4 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="text-sm font-medium text-gray-700">Filtruj:</span>
+        <button
+          id="filterAll"
+          class="px-3 py-1.5 text-sm rounded-md bg-blue-500 text-white font-medium"
+          data-filter="all">
+          Wszystkie
+        </button>
+        <button
+          id="filterHolidays"
+          class="px-3 py-1.5 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 font-medium"
+          data-filter="holidays">
+          <span class="text-xs font-bold text-red-300 mr-1">u</span>
+          Urlopy
+        </button>
+        <button
+          id="filterRemote"
+          class="px-3 py-1.5 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 font-medium"
+          data-filter="remote">
+          <span class="text-xs font-bold text-cyan-600 mr-1">z</span>
+          Zdalne
+        </button>
+      </div>
+    </div>
     <div class="relative">
       <input
         type="text"
@@ -168,7 +216,7 @@
       <% if (!groupedEmployees || groupedEmployees.length === 0) { %>
       <div class="text-center py-12 bg-gray-50 rounded-lg">
         <p class="text-gray-500 text-lg">
-          Brak danych o urlopach pracowników w tym miesiącu (lub żaden pracownik nie ma urlopu).
+          Brak danych o urlopach lub pracy zdalnej pracowników w tym miesiącu.
         </p>
       </div>
       <% } else { %>
@@ -205,6 +253,12 @@
                   max-width: 32px !important;
                 " />
               <% } %>
+              <col
+                style="
+                  width: 90px !important;
+                  min-width: 90px !important;
+                  max-width: 90px !important;
+                " />
               <col
                 style="
                   width: 90px !important;
@@ -256,13 +310,24 @@
 
                 <th
                   scope="col"
+                  class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky bg-gray-50 z-10"
+                  style="
+                    width: 90px !important;
+                    min-width: 90px !important;
+                    max-width: 90px !important;
+                    right: 90px;
+                  ">
+                  Urlopy
+                </th>
+                <th
+                  scope="col"
                   class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50 z-10"
                   style="
                     width: 90px !important;
                     min-width: 90px !important;
                     max-width: 90px !important;
                   ">
-                  Dni urlopu
+                  Zdalne
                 </th>
               </tr>
             </thead>
@@ -270,8 +335,8 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <% if (group.employees.length === 0) { %>
               <tr>
-                <td colspan="<%= daysInMonth.length + 2 %>" class="px-2 py-3 text-center text-sm text-gray-500">
-                  Brak pracowników z urlopami w tej grupie
+                <td colspan="<%= daysInMonth.length + 3 %>" class="px-2 py-3 text-center text-sm text-gray-500">
+                  Brak pracowników z urlopami lub pracą zdalną w tej grupie
                 </td>
               </tr>
               <% } else { %>
@@ -280,7 +345,9 @@
                   class="employee-row <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %>"
                   data-name="<%= employee.name.toLowerCase() %>"
                   data-email="<%= employee.email.toLowerCase() %>"
-                  data-group-id="<%= group.id %>">
+                  data-group-id="<%= group.id %>"
+                  data-has-holidays="<%= employee.holidayCount > 0 ? 'true' : 'false' %>"
+                  data-has-remote="<%= employee.remoteDaysCount > 0 ? 'true' : 'false' %>">
                   <!-- Employee name (sticky) -->
                   <td
                     class="px-2 py-2 whitespace-nowrap truncate text-sm font-medium text-gray-900 sticky left-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10"
@@ -302,18 +369,26 @@
                       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; 
                       const dateKey = date.split('T')[0];
                       const isPublicHoliday = publicHolidays[dateKey]; 
+                      const workLocation = employee.workLocations ? employee.workLocations[dateKey] : undefined;
+                      const isRemote = workLocation === false; // is_onsite === false means remote
                       
                       let cellClass = ""; 
                       let tooltip = ''; 
+                      let showIndicator = null;
                       
                       if (isHoliday) { 
                         cellClass += " bg-red-100"; 
                         tooltip = 'Urlop'; 
+                        showIndicator = 'u';
                       } else if (isWeekend) { 
                         cellClass += " bg-gray-100"; 
                       } else if (isPublicHoliday) { 
                         cellClass += " bg-purple-100"; 
                         tooltip = `Święto: ${isPublicHoliday}`; 
+                      } else if (isRemote) {
+                        cellClass += " bg-cyan-100";
+                        tooltip = 'Praca zdalnie';
+                        showIndicator = 'z';
                       } else { 
                         cellClass += " bg-green-100"; 
                       } 
@@ -329,13 +404,27 @@
                       padding: 0;
                       box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
                     ">
-                    <% if (isHoliday) { %>
+                    <% if (showIndicator === 'u') { %>
                     <div class="w-full h-full flex items-center justify-center text-xs font-bold text-red-300">u</div>
+                    <% } else if (showIndicator === 'z') { %>
+                    <div class="w-full h-full flex items-center justify-center text-xs font-bold text-cyan-600">z</div>
                     <% } %>
                   </td>
                   <% }); %>
 
                   <!-- Holiday count (sticky) -->
+                  <td
+                    class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900 text-center sticky <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10"
+                    style="
+                      width: 90px !important;
+                      min-width: 90px !important;
+                      max-width: 90px !important;
+                      right: 90px;
+                    ">
+                    <%= employee.holidayCount %>
+                  </td>
+
+                  <!-- Remote days count (sticky) -->
                   <td
                     class="px-2 py-2 whitespace-nowrap text-sm font-medium text-gray-900 text-center sticky right-0 <%= employeeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50' %> z-10"
                     style="
@@ -343,7 +432,7 @@
                       min-width: 90px !important;
                       max-width: 90px !important;
                     ">
-                    <%= employee.holidayCount %>
+                    <%= employee.remoteDaysCount %>
                   </td>
                 </tr>
                 <% }); %>
@@ -442,9 +531,27 @@
     // Initialize month display
     updateMonthDisplay();
     
+    // Month navigation buttons
+    const navigatePrevBtn = document.getElementById('navigatePrevMonth');
+    const navigateNextBtn = document.getElementById('navigateNextMonth');
+    
+    if (navigatePrevBtn) {
+      navigatePrevBtn.addEventListener('click', function() {
+        navigateMonth(-1);
+      });
+    }
+    
+    if (navigateNextBtn) {
+      navigateNextBtn.addEventListener('click', function() {
+        navigateMonth(1);
+      });
+    }
+    
     const searchInput = document.getElementById("employeeSearch");
     const employeeRows = document.querySelectorAll(".employee-row");
     const groupContainers = document.querySelectorAll(".group-container");
+    const filterButtons = document.querySelectorAll('[data-filter]');
+    let activeFilter = 'all'; // Default filter
 
     function updateVisibility() {
       const searchTerm = searchInput.value.toLowerCase().trim();
@@ -453,8 +560,22 @@
       employeeRows.forEach((row) => {
         const name = row.dataset.name;
         const email = row.dataset.email;
+        const hasHolidays = row.dataset.hasHolidays === 'true';
+        const hasRemote = row.dataset.hasRemote === 'true';
 
-        if (name.includes(searchTerm) || email.includes(searchTerm)) {
+        // Check search term match
+        const matchesSearch = name.includes(searchTerm) || email.includes(searchTerm);
+
+        // Check filter match
+        let matchesFilter = true;
+        if (activeFilter === 'holidays') {
+          matchesFilter = hasHolidays;
+        } else if (activeFilter === 'remote') {
+          matchesFilter = hasRemote;
+        }
+        // 'all' filter always matches
+
+        if (matchesSearch && matchesFilter) {
           row.style.display = "";
         } else {
           row.style.display = "none";
@@ -478,6 +599,26 @@
         }
       });
     }
+
+    // Filter button click handlers
+    filterButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        // Update active filter
+        activeFilter = this.dataset.filter;
+
+        // Update button styles
+        filterButtons.forEach(btn => {
+          if (btn.dataset.filter === activeFilter) {
+            btn.className = 'px-3 py-1.5 text-sm rounded-md bg-blue-500 text-white font-medium';
+          } else {
+            btn.className = 'px-3 py-1.5 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 font-medium';
+          }
+        });
+
+        // Update visibility
+        updateVisibility();
+      });
+    });
 
     searchInput.addEventListener("input", updateVisibility);
 

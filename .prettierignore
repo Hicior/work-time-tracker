@@ -1,0 +1,11 @@
+# Ignore EJS templates - Prettier breaks EJS syntax
+**/*.ejs
+views/**/*.ejs
+
+# Ignore node_modules
+node_modules/
+
+# Ignore build outputs
+dist/
+build/
+

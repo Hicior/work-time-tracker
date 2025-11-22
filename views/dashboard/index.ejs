@@ -47,7 +47,7 @@
   let totalActiveEmployees = 0;
   groupedEmployees.forEach(group => {
     const activeEmployees = group.employees.filter(emp => 
-      emp.holidays.length > 0 || emp.totalHours > 0
+      emp.holidays.length > 0 || emp.totalHours > 0 || (emp.dateToLocationMap && Object.keys(emp.dateToLocationMap).length > 0)
     );
     totalActiveEmployees += activeEmployees.length;
   });
@@ -85,6 +85,12 @@
         <span class="text-sm font-medium text-gray-700">Dzień pracujący</span>
       </div>
       <div class="flex items-center p-2 rounded">
+        <div class="w-6 h-6 bg-green-100 mr-2 rounded border border-green-200 relative">
+          <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-cyan-600 rounded-full"></span>
+        </div>
+        <span class="text-sm font-medium text-gray-700">Praca zdalna</span>
+      </div>
+      <div class="flex items-center p-2 rounded">
         <div class="w-6 h-6 bg-red-100 mr-2 rounded border border-red-200"></div>
         <span class="text-sm font-medium text-gray-700">Urlop</span>
       </div>
@@ -108,7 +114,7 @@
           <% 
             // Filter employees to show only those with holidays or work hours
             const filteredEmployees = group.employees.filter(emp => 
-              emp.holidays.length > 0 || emp.totalHours > 0
+              emp.holidays.length > 0 || emp.totalHours > 0 || (emp.dateToLocationMap && Object.keys(emp.dateToLocationMap).length > 0)
             );
           %>
           <!-- Group header -->
@@ -229,6 +235,8 @@
                     <!-- Hours for each day -->
                     <% daysInMonth.forEach(date => { 
                         const hours = employee.dateToHoursMap[date] || 0;
+                        const isOnsite = employee.dateToLocationMap[date];
+                        const isRemote = isOnsite === false;
                         const isHoliday = employee.holidays.includes(date);
                         const dayDate = new Date(date);
                         const dayOfWeek = dayDate.getDay();
@@ -236,7 +244,7 @@
                         const dateKey = date.split('T')[0]; 
                         const isPublicHoliday = publicHolidays[dateKey];
                         
-                        let cellClass = "px-1 py-2 whitespace-nowrap text-sm text-center";
+                        let cellClass = "px-1 py-2 whitespace-nowrap text-sm text-center relative";
                         let tooltip = '';
                         
                         if (isHoliday) {
@@ -249,6 +257,9 @@
                           tooltip = `Święto: ${isPublicHoliday}`;
                         } else if (hours > 0) {
                           cellClass += " bg-green-100";
+                          if (isRemote) {
+                            tooltip = 'Praca zdalna';
+                          }
                         }
                         
                         if (dayDate.getDate() === 20 || dayDate.getDate() === 21) {
@@ -257,6 +268,13 @@
                     %>
                       <td class="<%= cellClass %>" title="<%= tooltip %>" style="width: 32px !important; min-width: 32px !important; max-width: 32px !important;">
                         <%= hours > 0 ? hours : '' %>
+                        <% 
+                          const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday-Friday
+                          const isWorkday = isWeekday && !isHoliday && !isPublicHoliday;
+                        %>
+                        <% if (hours > 0 && isRemote && isWorkday) { %>
+                          <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-cyan-600 rounded-full" title="Praca zdalna"></span>
+                        <% } %>
                       </td>
                     <% }); %>
                     

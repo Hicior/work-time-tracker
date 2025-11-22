@@ -10,6 +10,7 @@ const WorkHours = require("../models/WorkHours");
 const Holiday = require("../models/Holiday");
 const PublicHoliday = require("../models/PublicHoliday");
 const Group = require("../models/Group");
+const WorkLocation = require("../models/WorkLocation");
 const { formatDateForDisplay, formatDate } = require("../utils/dateUtils");
 const { prepareMessages } = require("../utils/messageUtils");
 
@@ -65,26 +66,53 @@ router.get("/", async (req, res) => {
       holiday.holiday_date = formatDateForDisplay(holiday.holiday_date);
     });
 
-    // Prepare data for all users
+    // Fetch all work hours, locations and holidays for all users in batch queries (instead of N*2 queries)
+    const allWorkHours = await WorkHours.findAllByDateRange(startDate, endDate);
+    const allLocations = await WorkLocation.findAllByDateRange(
+      startDate,
+      endDate
+    );
+    const allHolidays = await Holiday.findAllByDateRange(startDate, endDate);
+
+    // Group work hours by user_id for O(1) lookup
+    const workHoursByUser = {};
+    allWorkHours.forEach((entry) => {
+      if (!workHoursByUser[entry.user_id]) {
+        workHoursByUser[entry.user_id] = [];
+      }
+      workHoursByUser[entry.user_id].push(entry);
+    });
+
+    // Group locations by user_id for O(1) lookup
+    const locationsByUser = {};
+    allLocations.forEach((entry) => {
+      if (!locationsByUser[entry.user_id]) {
+        locationsByUser[entry.user_id] = [];
+      }
+      locationsByUser[entry.user_id].push(entry);
+    });
+
+    // Group holidays by user_id for O(1) lookup
+    const holidaysByUser = {};
+    allHolidays.forEach((holiday) => {
+      if (!holidaysByUser[holiday.user_id]) {
+        holidaysByUser[holiday.user_id] = [];
+      }
+      holidaysByUser[holiday.user_id].push(holiday);
+    });
+
+    // Prepare data for all users using pre-fetched data
     for (const user of users) {
-      // Get work hours for this user in the selected month
-      const workHours = await WorkHours.findByUserAndDateRange(
-        user.id,
-        startDate,
-        endDate
-      );
+      // Get work hours for this user from the pre-fetched map
+      const workHours = workHoursByUser[user.id] || [];
 
       // Format work hours dates
       workHours.forEach((entry) => {
         entry.work_date = formatDateForDisplay(entry.work_date);
       });
 
-      // Get holidays for this user in the selected month
-      const holidays = await Holiday.findByUserAndDateRange(
-        user.id,
-        startDate,
-        endDate
-      );
+      // Get holidays for this user from the pre-fetched map
+      const holidays = holidaysByUser[user.id] || [];
 
       // Format holiday dates
       holidays.forEach((holiday) => {
@@ -97,11 +125,20 @@ router.get("/", async (req, res) => {
         0
       );
 
-      // Create an object with dates mapped to hours worked
+      // Create an object with dates mapped to hours worked and location
       const dateToHoursMap = {};
+      const dateToLocationMap = {};
+      const userLocations = locationsByUser[user.id] || [];
+      userLocations.forEach((loc) => {
+        const date = formatDate(loc.work_date);
+        dateToLocationMap[date] = loc.is_onsite;
+      });
       workHours.forEach((entry) => {
         const date = formatDate(entry.work_date);
         dateToHoursMap[date] = entry.total_hours;
+        if (dateToLocationMap[date] === undefined) {
+          dateToLocationMap[date] = entry.is_onsite;
+        }
       });
 
       // Create a map of dates to holiday status
@@ -114,6 +151,7 @@ router.get("/", async (req, res) => {
         user: user,
         totalHours: totalHours,
         dateToHoursMap: dateToHoursMap,
+        dateToLocationMap: dateToLocationMap,
         holidays: holidayDates,
       });
     }
@@ -182,10 +220,11 @@ router.get("/", async (req, res) => {
     });
   } catch (error) {
     console.error("Error loading dashboard:", error);
+    const isDevelopment = process.env.NODE_ENV !== 'production';
     res.status(500).render("error", {
       title: "Błąd",
       message: "Nie udało się załadować danych dashboardu",
-      error: error,
+      error: isDevelopment ? error : null,
       isAuthenticated: req.oidc.isAuthenticated(),
       user: req.oidc.user,
       currentPage: "error",

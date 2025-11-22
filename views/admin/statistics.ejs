@@ -55,11 +55,19 @@
         </h3>
         
         <!-- Edit Information Notice -->
-        <div class="absolute top-0 right-0 text-sm text-blue-600 flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>Kliknij w dzień, aby edytować godziny</span>
+        <div class="absolute top-0 right-0 flex flex-col items-end gap-2">
+          <div class="text-sm text-blue-600 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Kliknij w dzień, aby edytować godziny</span>
+          </div>
+          <div class="text-sm text-cyan-600 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Praca zdalnie</span>
+          </div>
         </div>
       </div>
       
@@ -83,27 +91,41 @@
               const day = calendarData[i];
               const isCurrentMonth = day.isCurrentMonth;
           %>
-            <div class="relative aspect-square w-[90px] rounded-lg border <%= 
-              isCurrentMonth ?
-                (day.hours > 0 ? 'border-blue-500 bg-blue-50' : 'border-gray-300') :
-                'border-gray-200 bg-gray-100'
-              %> flex flex-col items-center justify-center shadow-sm <%=
+            <div class="relative aspect-square w-[90px] rounded-lg border <%=
+              (() => {
+                if (!isCurrentMonth) return 'border-gray-200 bg-gray-100';
+                if (day.hours === 0) return 'border-gray-300';
+                const dayOfWeek = new Date(day.date).getDay(); // 0=Sunday, 6=Saturday
+                const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday-Friday
+                const isWorkday = isWeekday && !day.isHoliday && !day.isPublicHoliday;
+                if (day.isRemote && isWorkday) return 'border-cyan-500 bg-cyan-50';
+                return 'border-blue-500 bg-blue-50';
+              })()
+            %> flex flex-col items-center justify-center shadow-sm <%=
               isCurrentMonth ? 'hover:shadow-md cursor-pointer' : 'cursor-not-allowed opacity-60'
               %> transition-shadow p-1 daybox <%= !isCurrentMonth ? 'other-month' : '' %>" 
               data-date="<%= day.date %>" 
               data-hours="<%= day.hours %>" 
               data-user-id="<%= selectedUserId %>"
+              data-is-holiday="<%= day.isHoliday ? 'true' : 'false' %>"
+              data-is-public-holiday="<%= day.isPublicHoliday ? 'true' : 'false' %>"
               <%= !isCurrentMonth ? 'data-disabled="true"' : '' %>>
             
             <!-- Day number (small, top right) -->
             <span class="absolute top-0 right-0.5 text-sm <%= isCurrentMonth ? 'text-gray-500' : 'text-gray-400' %>"><%= day.day %></span>
             
             <!-- Hours (center, large) - this will be hidden when editing -->
-            <span class="text-base font-bold <%= 
-              isCurrentMonth ?
-                (day.hours > 0 ? 'text-blue-500' : 'text-gray-400') :
-                'text-gray-300'
-              %> hours-display">
+            <span class="text-base font-bold <%=
+              (() => {
+                if (!isCurrentMonth) return 'text-gray-300';
+                if (day.hours === 0) return 'text-gray-400';
+                const dayOfWeek = new Date(day.date).getDay(); // 0=Sunday, 6=Saturday
+                const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday-Friday
+                const isWorkday = isWeekday && !day.isHoliday && !day.isPublicHoliday;
+                if (day.isRemote && isWorkday) return 'text-cyan-600';
+                return 'text-blue-500';
+              })()
+            %> hours-display">
               <%= isCurrentMonth && day.hours > 0 ? day.hours : '-' %>
             </span>
             
@@ -195,6 +217,7 @@
     const userResults = document.getElementById('user_results');
     
     // User data from server
+    /* eslint-disable */
     const users = [
       <% users.forEach(user => { %>
         {
@@ -205,6 +228,7 @@
         },
       <% }); %>
     ];
+    /* eslint-enable */
     
     // Set initial search input value to selected user's name
     const selectedUser = users.find(user => user.selected);
@@ -453,10 +477,12 @@
       box.classList.add('opacity-50');
       
       // Make API call to update hours
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
       fetch('/work-hours/statistics/update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           user_id: userId,
@@ -473,12 +499,13 @@
       .then(data => {
         // Update display
         const hoursDisplay = box.querySelector('.hours-display');
+        const isRemote = data.data && data.data.is_onsite === false;
         
         if (newHours === 0) {
           hoursDisplay.textContent = '-';
-          hoursDisplay.classList.remove('text-blue-500');
+          hoursDisplay.classList.remove('text-blue-500', 'text-cyan-600');
           hoursDisplay.classList.add('text-gray-400');
-          box.classList.remove('border-blue-500', 'bg-blue-50');
+          box.classList.remove('border-blue-500', 'bg-blue-50', 'border-cyan-500', 'bg-cyan-50');
           box.classList.add('border-gray-300');
           box.dataset.hours = 0;
           
@@ -486,10 +513,25 @@
           window.showNotification('Godziny pracy zostały usunięte.', 'success');
         } else {
           hoursDisplay.textContent = newHours;
-          hoursDisplay.classList.add('text-blue-500');
-          hoursDisplay.classList.remove('text-gray-400');
-          box.classList.add('border-blue-500', 'bg-blue-50');
-          box.classList.remove('border-gray-300');
+          // Update color based on remote work status, weekday, and exclude holidays
+          const dateObj = new Date(date);
+          const dayOfWeek = dateObj.getDay(); // 0=Sunday, 6=Saturday
+          const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday-Friday
+          const isHoliday = box.dataset.isHoliday === 'true';
+          const isPublicHoliday = box.dataset.isPublicHoliday === 'true';
+          const isWorkday = isWeekday && !isHoliday && !isPublicHoliday;
+          
+          if (isRemote && isWorkday) {
+            hoursDisplay.classList.remove('text-blue-500', 'text-gray-400');
+            hoursDisplay.classList.add('text-cyan-600');
+            box.classList.remove('border-blue-500', 'bg-blue-50', 'border-gray-300');
+            box.classList.add('border-cyan-500', 'bg-cyan-50');
+          } else {
+            hoursDisplay.classList.remove('text-cyan-600', 'text-gray-400');
+            hoursDisplay.classList.add('text-blue-500');
+            box.classList.remove('border-cyan-500', 'bg-cyan-50', 'border-gray-300');
+            box.classList.add('border-blue-500', 'bg-blue-50');
+          }
           box.dataset.hours = newHours;
           
           // Show success toast - use window.showNotification

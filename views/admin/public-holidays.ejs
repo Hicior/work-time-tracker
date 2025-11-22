@@ -41,6 +41,7 @@
       </div>
       <div class="p-6">
         <form action="/admin/public-holidays" method="POST">
+          <%- include('../partials/csrf-field') %>
           <div class="mb-4">
             <label for="name" class="block text-gray-700 text-sm font-bold mb-2">Nazwa święta</label>
             <input type="text" id="name" name="name" 
@@ -114,8 +115,8 @@
                     <%= new Date(holiday.holiday_date).toLocaleDateString('pl-PL') %>
                   </td>
                   <td class="py-3 px-6 text-center">
-                    <form action="/admin/public-holidays/<%= holiday.id %>/delete" method="POST" class="inline" 
-                      onsubmit="return confirm('Czy na pewno chcesz usunąć ten dzień wolny?');">
+                    <form action="/admin/public-holidays/<%= holiday.id %>/delete" method="POST" class="inline delete-public-holiday-form">
+                      <%- include('../partials/csrf-field') %>
                       <button type="submit" 
                         class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-xs">
                         Usuń
@@ -151,4 +152,17 @@
       </p>
     </div>
   </div>
-</div> 
+</div>
+
+<script>
+  // Delete public holiday form confirmations
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll('.delete-public-holiday-form').forEach(form => {
+      form.addEventListener('submit', function(e) {
+        if (!confirm('Czy na pewno chcesz usunąć ten dzień wolny?')) {
+          e.preventDefault();
+        }
+      });
+    });
+  });
+</script> 

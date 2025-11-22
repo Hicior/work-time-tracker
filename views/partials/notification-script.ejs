@@ -1,203 +1,188 @@
-<%# Use this partial in any view to show a notification %> <%# Example: %> <%#
-<button onclick="showNotification('Your action was successful!', 'success')">
-  Show Success
-</button>
-%> <%#
-<button onclick="showNotification('Something went wrong!', 'error')">
-  Show Error
-</button>
-%> <%#
-<button onclick="showNotification('This is some information.', 'info')">
-  Show Info
-</button>
-%> <%#
-<button onclick="showNotification('Be careful with this!', 'warning')">
-  Show Warning
-</button>
-%>
-
-<!-- Toast notification container -->
-<div
-  id="toast-container"
-  class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
+<%# Notification partial - use via showNotification() %>
+<div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none sm:max-w-sm w-full p-4 sm:p-0"></div>
 
 <style>
-  /* Remove arrows/spinners from number inputs */
-  input[type="number"]::-webkit-inner-spin-button,
-  input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+  .toast-animate-in {
+    animation: toastEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
-
-  /* For Firefox */
-  input[type="number"] {
-    -moz-appearance: textfield;
+  .toast-animate-out {
+    animation: toastExit 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
   }
-
-  /* Animation for toast notifications */
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
+  
+  @keyframes toastEnter {
+    0% { 
+      opacity: 0; 
+      transform: translate3d(100%, 0, 0) scale(0.95);
     }
-    to {
-      opacity: 1;
-      transform: translateY(0);
+    100% { 
+      opacity: 1; 
+      transform: translate3d(0, 0, 0) scale(1);
     }
   }
-
-  @keyframes fadeOut {
-    from {
-      opacity: 1;
-      transform: translateY(0);
+  
+  @keyframes toastExit {
+    0% { 
+      opacity: 1; 
+      transform: translate3d(0, 0, 0) scale(1);
+      max-height: 200px;
     }
-    to {
-      opacity: 0;
-      transform: translateY(-10px);
+    100% { 
+      opacity: 0; 
+      transform: translate3d(120%, 0, 0) scale(0.9);
+      max-height: 0;
+      margin-top: 0;
+      margin-bottom: 0;
+      padding-top: 0;
+      padding-bottom: 0;
     }
   }
-
-  .toast-enter {
-    animation: fadeIn 0.3s ease forwards;
+  
+  @keyframes iconBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
   }
-
-  .toast-exit {
-    animation: fadeOut 0.3s ease forwards;
+  
+  @keyframes progressBar {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+  }
+  
+  .toast-icon-animate {
+    animation: iconBounce 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  .toast-progress {
+    animation: progressBar linear forwards;
+    transform-origin: left;
   }
 </style>
 
 <script>
-  // Create the toast container if it doesn't exist
-  document.addEventListener("DOMContentLoaded", function () {
-    if (!document.getElementById("toast-container")) {
-      const container = document.createElement("div");
+  window.showNotification = function (message, type = "info", duration = 4000) {
+    let container = document.getElementById("toast-container");
+    if (!container) {
+      container = document.createElement("div");
       container.id = "toast-container";
-      container.className = "fixed top-4 right-4 z-50 flex flex-col gap-2";
+      container.className = "fixed top-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none sm:max-w-sm w-full p-4 sm:p-0";
       document.body.appendChild(container);
     }
-  });
 
-  // Main notification function
-  window.showNotification = function (message, type = "info", duration = 3000) {
-    const toastContainer = document.getElementById("toast-container");
-    if (!toastContainer) return;
+    // Normalize type
+    if (type === "warning") type = "warn";
 
-    // Map the old warning type to new system
-    if (type === "warning") {
-      type = "warn";
-    }
+    // Enhanced modern styles configuration
+    const styles = {
+      success: {
+        wrapper: "bg-gradient-to-br from-white to-green-50/30 border-green-200/60 shadow-xl shadow-green-100/50",
+        iconWrapper: "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg shadow-green-500/30",
+        titleColor: "text-gray-900",
+        progressBar: "bg-gradient-to-r from-green-500 to-green-600",
+        icon: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.75 12.75L10 15.25L16.25 8.75" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      },
+      error: {
+        wrapper: "bg-gradient-to-br from-white to-red-50/30 border-red-200/60 shadow-xl shadow-red-100/50",
+        iconWrapper: "bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/30",
+        titleColor: "text-gray-900",
+        progressBar: "bg-gradient-to-r from-red-500 to-red-600",
+        icon: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      },
+      warn: {
+        wrapper: "bg-gradient-to-br from-white to-amber-50/30 border-amber-200/60 shadow-xl shadow-amber-100/50",
+        iconWrapper: "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/30",
+        titleColor: "text-gray-900",
+        progressBar: "bg-gradient-to-r from-amber-500 to-amber-600",
+        icon: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 9V11M12 15H12.01M5.0718 19H18.9282C19.9693 19 20.6202 17.8729 20.0998 16.9715L13.1716 4.9715C12.6512 4.0701 11.3488 4.0701 10.8284 4.9715L3.90016 16.9715C3.37978 17.8729 4.03071 19 5.0718 19Z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      },
+      info: {
+        wrapper: "bg-gradient-to-br from-white to-blue-50/30 border-blue-200/60 shadow-xl shadow-blue-100/50",
+        iconWrapper: "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30",
+        titleColor: "text-gray-900",
+        progressBar: "bg-gradient-to-r from-blue-500 to-blue-600",
+        icon: '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 16H12V12H11M12 8H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      }
+    };
 
-    // Create toast element
+    const style = styles[type] || styles.info;
+
     const toast = document.createElement("div");
-    toast.className = `flex items-center p-4 mb-4 rounded-lg shadow-md max-w-xs toast-enter ${
-      type === "success"
-        ? "bg-green-50 text-green-800 border border-green-300"
-        : type === "error"
-        ? "bg-red-50 text-red-800 border border-red-300"
-        : type === "warn"
-        ? "bg-yellow-50 text-yellow-800 border border-yellow-300"
-        : "bg-blue-50 text-blue-800 border border-blue-300"
-    }`;
-
-    // Add icon based on type
-    let iconSvg = "";
-    if (type === "success") {
-      iconSvg =
-        '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>';
-    } else if (type === "error") {
-      iconSvg =
-        '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>';
-    } else if (type === "warn") {
-      iconSvg =
-        '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>';
-    } else {
-      iconSvg =
-        '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>';
-    }
-
-    // Set toast content
+    toast.className = `pointer-events-auto relative overflow-hidden rounded-2xl border-2 backdrop-blur-xl toast-animate-in group ${style.wrapper}`;
+    
     toast.innerHTML = `
-      <div class="flex items-center">
-        ${iconSvg}
-        <span>${message}</span>
+      <div class="flex items-start gap-3.5 p-4">
+        <div class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-xl toast-icon-animate ${style.iconWrapper}">
+          ${style.icon}
+        </div>
+        <div class="flex-1 pt-1 min-w-0 pr-2">
+          <p class="text-sm font-semibold leading-5 tracking-tight ${style.titleColor}">${message}</p>
+        </div>
+        <button type="button" class="flex-shrink-0 -mt-0.5 -mr-0.5 p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100/80 active:bg-gray-200/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300 opacity-60 group-hover:opacity-100">
+          <span class="sr-only">Close</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
       </div>
-      <button type="button" class="ml-auto -mx-1.5 -my-1.5 rounded-lg p-1.5 inline-flex items-center justify-center h-8 w-8 ${
-        type === "success"
-          ? "text-green-500 hover:text-green-700"
-          : type === "error"
-          ? "text-red-500 hover:text-red-700"
-          : type === "warn"
-          ? "text-yellow-500 hover:text-yellow-700"
-          : "text-blue-500 hover:text-blue-700"
-      }">
-        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
-      </button>
+      ${duration > 0 ? `<div class="absolute bottom-0 left-0 right-0 h-1 bg-gray-200/30 overflow-hidden">
+        <div class="h-full toast-progress ${style.progressBar}" style="animation-duration: ${duration}ms;"></div>
+      </div>` : ''}
     `;
 
-    // Add close button functionality
-    toast.querySelector("button").addEventListener("click", () => {
-      removeToast(toast);
-    });
+    // Close Logic with pause on hover
+    let timeoutId;
+    let isPaused = false;
+    
+    const close = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      
+      toast.classList.remove("toast-animate-in");
+      toast.classList.add("toast-animate-out");
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 300);
+    };
 
-    // Add to container
-    toastContainer.appendChild(toast);
+    const closeButton = toast.querySelector("button");
+    if (closeButton) {
+      closeButton.addEventListener("click", close);
+    }
+    
+    // Pause progress bar on hover
+    if (duration > 0) {
+      const progressBar = toast.querySelector(".toast-progress");
+      
+      toast.addEventListener("mouseenter", () => {
+        isPaused = true;
+        if (timeoutId) clearTimeout(timeoutId);
+        if (progressBar) {
+          progressBar.style.animationPlayState = "paused";
+        }
+      });
+      
+      toast.addEventListener("mouseleave", () => {
+        if (isPaused) {
+          isPaused = false;
+          if (progressBar) {
+            progressBar.style.animationPlayState = "running";
+            // Calculate remaining time based on progress
+            const computedStyle = window.getComputedStyle(progressBar);
+            const transform = computedStyle.transform;
+            const matrix = new DOMMatrix(transform);
+            const remainingRatio = matrix.m11; // scaleX value
+            const remainingTime = duration * remainingRatio;
+            
+            if (remainingTime > 100) {
+              timeoutId = setTimeout(close, remainingTime);
+            } else {
+              close();
+            }
+          }
+        }
+      });
+    }
 
-    // Auto-remove after specified duration
-    setTimeout(() => {
-      removeToast(toast);
-    }, duration);
+    container.appendChild(toast);
+    
+    if (duration > 0) {
+      timeoutId = setTimeout(close, duration);
+    }
   };
-
-  function removeToast(toast) {
-    toast.classList.remove("toast-enter");
-    toast.classList.add("toast-exit");
-
-    // Remove after animation completes
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.parentNode.removeChild(toast);
-      }
-    }, 300);
-  }
-
-  // Process URL parameters to show notifications
-  document.addEventListener("DOMContentLoaded", function () {
-    const urlParams = new URLSearchParams(window.location.search);
-
-    // Check for success message
-    if (urlParams.has("success")) {
-      showNotification(
-        document.querySelector('[data-message="success"]')?.textContent ||
-          "Operacja zakończona pomyślnie",
-        "success"
-      );
-    }
-
-    // Check for error message
-    if (urlParams.has("error")) {
-      showNotification(
-        document.querySelector('[data-message="error"]')?.textContent ||
-          "Wystąpił błąd",
-        "error"
-      );
-    }
-
-    // Check for info message
-    if (urlParams.has("info")) {
-      showNotification(
-        document.querySelector('[data-message="info"]')?.textContent ||
-          "Informacja",
-        "info"
-      );
-    }
-
-    // Check for warning message
-    if (urlParams.has("warning")) {
-      showNotification(
-        document.querySelector('[data-message="warning"]')?.textContent ||
-          "Ostrzeżenie",
-        "warn"
-      );
-    }
-  });
 </script>

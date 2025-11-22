@@ -3,7 +3,7 @@
 <div class="bg-white rounded-lg shadow p-6">
   <div class="flex justify-between items-center mb-6">
     <div class="flex items-center space-x-4">
-      <h2 class="text-2xl font-bold text-gray-900">Urlopy pracowników</h2>
+      <h2 class="text-2xl font-bold text-gray-900">Urlopy/zdalne pracowników</h2>
       <div class="flex space-x-2">
         <a
         href="/holidays/employees/by-person?month=<%= month %>&year=<%= year %>"
@@ -18,7 +18,7 @@
       <div class="flex items-center space-x-1" id="monthNavigation" 
            data-current-month="<%= month %>" data-current-year="<%= year %>">
         <!-- Previous month button -->
-        <button onclick="navigateMonth(-1)" 
+        <button id="navigatePrevMonth" 
                 class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -40,7 +40,7 @@
         </a>
         
         <!-- Next month button -->
-        <button onclick="navigateMonth(1)" 
+        <button id="navigateNextMonth" 
                 class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -225,6 +225,22 @@
   document.addEventListener("DOMContentLoaded", function () {
     // Initialize month display
     updateMonthDisplay();
+    
+    // Month navigation buttons
+    const navigatePrevBtn = document.getElementById('navigatePrevMonth');
+    const navigateNextBtn = document.getElementById('navigateNextMonth');
+    
+    if (navigatePrevBtn) {
+      navigatePrevBtn.addEventListener('click', function() {
+        navigateMonth(-1);
+      });
+    }
+    
+    if (navigateNextBtn) {
+      navigateNextBtn.addEventListener('click', function() {
+        navigateMonth(1);
+      });
+    }
     
     const searchInput = document.getElementById("employeeSearch");
     const employeeItems = document.querySelectorAll(".employee-item");

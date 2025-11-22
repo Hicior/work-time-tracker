@@ -10,7 +10,7 @@ const ejsMate = require("ejs-mate");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const { auth } = require("express-openid-connect");
-const { authLimiter, apiLimiter } = require("./utils/rateLimiter");
+const { authLimiter, apiLimiter, healthCheckLimiter } = require("./utils/rateLimiter");
 require("dotenv").config();
 
 // Validate environment variables before starting the application
@@ -29,10 +29,10 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // Required for Tailwind CSS
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"], // Required for Tailwind CSS and Google Fonts
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'", "https:"], // Required for Auth0
-      fontSrc: ["'self'", "data:"],
+      fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"], // Required for Google Fonts
     },
   },
 }));
@@ -42,11 +42,34 @@ app.use('/login', authLimiter);
 app.use('/callback', authLimiter);
 app.use('/admin-api', apiLimiter);
 
+// Health check endpoint - accessible without authentication for monitoring/load balancers
+// Must be placed before Auth0 middleware to bypass authentication
+const { pool } = require('./db/database');
+app.get('/health', healthCheckLimiter, async (req, res) => {
+  try {
+    // Quick database connectivity check
+    await pool.query('SELECT 1');
+    res.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    // Database connection failed - return 503 Service Unavailable
+    res.status(503).json({
+      status: 'error',
+      message: 'Database connection failed',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 const User = require("./models/User");
 const Group = require("./models/Group");
 const WorkHours = require("./models/WorkHours");
+const WorkLocation = require("./models/WorkLocation");
 const { prepareMessages } = require("./utils/messageUtils");
+const { shouldShowTodayLocationSection } = require("./utils/dateStatusService");
 
 // Auth0 configuration
 const config = {
@@ -55,18 +78,33 @@ const config = {
   secret: process.env.AUTH0_SECRET,
   baseURL: process.env.AUTH0_BASE_URL,
   clientID: process.env.AUTH0_CLIENT_ID,
+  clientSecret: process.env.AUTH0_CLIENT_SECRET,
   issuerBaseURL: `https://${process.env.AUTH0_DOMAIN}`,
+  authorizationParams: {
+    response_type: 'code',
+    scope: 'openid profile email',
+  },
+  session: {
+    rolling: true,
+    rollingDuration: 86400,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Lax',
+    },
+  },
 };
 
-// auth router attaches /login, /logout, and /callback routes to the baseURL
-app.use(auth(config));
-
-// Middleware
+// Middleware - must be configured BEFORE Auth0 middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 // Parse signed cookies for CSRF double-submit cookie pattern
-app.use(cookieParser(process.env.CSRF_COOKIE_SECRET || process.env.AUTH0_SECRET));
+app.use(cookieParser(process.env.CSRF_COOKIE_SECRET));
 app.use(express.static(path.join(__dirname, "public")));
+
+// auth router attaches /login, /logout, and /callback routes to the baseURL
+// Must come AFTER cookie-parser to properly handle session cookies
+app.use(auth(config));
 
 // Set view engine
 app.engine("ejs", ejsMate);
@@ -80,6 +118,7 @@ const groupsRoutes = require("./routes/groups");
 const publicHolidaysRoutes = require("./routes/public-holidays");
 const dashboardRoutes = require("./routes/dashboard");
 const adminApiRoutes = require("./routes/admin-api");
+const workLocationsRoutes = require("./routes/work-locations");
 
 // CSRF protection
 const { setCsrfToken, verifyCsrf, csrfErrorHandler } = require("./utils/csrf");
@@ -101,13 +140,9 @@ const requireAuth = async (req, res, next) => {
     // Check if user is blocked
     if (user.is_blocked) {
       console.warn(`Blocked user attempted access: ${user.email} (${user.auth0_id})`);
-      // Log out the user and redirect to blocked page
-      req.logout();
-      return res.render("blocked", {
-        title: "Konto Zablokowane",
-        isAuthenticated: false,
-        user: null,
-      });
+      // Redirect to logout with blocked=true query param to show message after logout
+      // This ensures proper cleanup of both local and Auth0 sessions
+      return res.redirect("/logout?returnTo=/&blocked=true");
     }
 
     // Add user to the request object
@@ -115,10 +150,11 @@ const requireAuth = async (req, res, next) => {
     next();
   } catch (error) {
     console.error("Error processing authenticated user:", error);
+    const isDevelopment = process.env.NODE_ENV !== 'production';
     return res.status(500).render("error", {
       title: "Error",
       message: "Failed to process user authentication",
-      error: error,
+      error: isDevelopment ? error : null,
       isAuthenticated: true,
       user: req.oidc.user,
     });
@@ -156,19 +192,33 @@ app.get("/", async (req, res) => {
   let dbUser = null;
   let monthStats = null;
   let publicHolidaysOnWorkdays = [];
+  let workLocationCalendars = [];
+  let locationWindow = null;
+  let todayLocation = null;
+  let currentMonthNumber = null;
+  let currentYearNumber = null;
+  let todayIso = null;
+  let showTodayLocationSection = true; // Default to true, will be set based on conditions
+  let isTodayRestricted = false;
+  let todayRestrictionReason = null;
 
   // If user is authenticated, get dbUser and month statistics
   if (req.oidc.isAuthenticated()) {
     try {
+      // NOTE: Homepage is public (no requireAuth middleware), so we need to get user data here.
+      // Performance: createFromAuth0 is throttled to only update last_login once per hour.
       dbUser = await User.createFromAuth0(req.oidc.user);
+
+      // Fetch data for stats
+      const { getWeekdaysInMonth, getMonthDateRange, formatDate } = require("./utils/dateUtils");
 
       // Get current month and year
       const today = new Date();
       const currentYear = today.getFullYear();
       const currentMonth = today.getMonth() + 1; // JavaScript months are 0-indexed
-
-      // Fetch data for stats
-      const { getWeekdaysInMonth } = require("./utils/dateUtils");
+      currentYearNumber = currentYear;
+      currentMonthNumber = currentMonth;
+      todayIso = formatDate(today);
       const Holiday = require("./models/Holiday");
       const PublicHoliday = require("./models/PublicHoliday");
 
@@ -227,6 +277,129 @@ app.get("/", async (req, res) => {
         requiredMonthlyHours,
         remainingHours: Math.round(remainingHours * 100) / 100,
       };
+
+      // Prepare work location planning for previous, current and next month
+      const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+      const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+      const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+      const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+      const { startDate: prevStart, endDate: prevEnd } = getMonthDateRange(
+        prevYear,
+        prevMonth
+      );
+      const { startDate: currStart, endDate: currEnd } = getMonthDateRange(
+        currentYear,
+        currentMonth
+      );
+      const { startDate: nextStart, endDate: nextEnd } = getMonthDateRange(
+        nextYear,
+        nextMonth
+      );
+
+      const locationWindowStart = prevStart;
+      const locationWindowEnd = nextEnd;
+      locationWindow = { start: locationWindowStart, end: locationWindowEnd };
+
+      const monthNames = [
+        "",
+        "Styczeń",
+        "Luty",
+        "Marzec",
+        "Kwiecień",
+        "Maj",
+        "Czerwiec",
+        "Lipiec",
+        "Sierpień",
+        "Wrzesień",
+        "Październik",
+        "Listopad",
+        "Grudzień",
+      ];
+
+      const [locationEntries, holidayEntries, prevPublicHolidays, nextPublicHolidays] =
+        await Promise.all([
+          WorkLocation.findByUserAndDateRange(
+            dbUser.id,
+            locationWindowStart,
+            locationWindowEnd
+          ),
+          Holiday.findByUserAndDateRange(
+            dbUser.id,
+            locationWindowStart,
+            locationWindowEnd
+          ),
+          PublicHoliday.findByMonthAndYear(prevMonth, prevYear),
+          PublicHoliday.findByMonthAndYear(nextMonth, nextYear),
+        ]);
+
+      const allPublicHolidaysForWindow = [
+        ...prevPublicHolidays,
+        ...publicHolidays,
+        ...nextPublicHolidays,
+      ];
+
+      const locationMap = {};
+      locationEntries.forEach((loc) => {
+        locationMap[formatDate(loc.work_date)] = loc.is_onsite;
+      });
+
+      const holidaySet = new Set(
+        holidayEntries.map((h) => formatDate(h.holiday_date))
+      );
+      const publicHolidaySet = new Set(
+        allPublicHolidaysForWindow.map((ph) => formatDate(ph.holiday_date))
+      );
+
+      const buildLocationCalendar = (month, year) => {
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const formattedMonth = month.toString().padStart(2, "0");
+        const days = [];
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dayStr = day.toString().padStart(2, "0");
+          const dateStr = `${year}-${formattedMonth}-${dayStr}`;
+          const dateObj = new Date(year, month - 1, day);
+          const dayOfWeek = dateObj.getDay();
+          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+          const locationValue =
+            locationMap[dateStr] !== undefined ? locationMap[dateStr] : null;
+
+          days.push({
+            day,
+            date: dateStr,
+            isWeekend,
+            isHoliday: holidaySet.has(dateStr),
+            isPublicHoliday: publicHolidaySet.has(dateStr),
+            is_onsite: locationValue,
+            isRemote: locationValue === false,
+          });
+        }
+
+        return {
+          month,
+          year,
+          monthName: monthNames[month] || month,
+          days,
+        };
+      };
+
+      workLocationCalendars = [
+        buildLocationCalendar(prevMonth, prevYear),
+        buildLocationCalendar(currentMonth, currentYear),
+        buildLocationCalendar(nextMonth, nextYear),
+      ];
+
+      todayLocation = locationMap[formatDate(today)] ?? null;
+
+      // Extract today's information from calendar to check restrictions
+      const todayInfo = workLocationCalendars[1]?.days.find(day => day.date === todayIso);
+      isTodayRestricted = todayInfo ? (todayInfo.isWeekend || todayInfo.isHoliday || todayInfo.isPublicHoliday) : false;
+      todayRestrictionReason = todayInfo?.isPublicHoliday ? 'święto' : todayInfo?.isHoliday ? 'urlop' : todayInfo?.isWeekend ? 'weekend' : null;
+
+      // Use centralized service to determine if today's location section should be shown
+      showTodayLocationSection = await shouldShowTodayLocationSection(dbUser.id);
     } catch (error) {
       console.error("Error getting user data for homepage:", error);
       // Provide fallback monthStats to prevent template crashes
@@ -251,6 +424,18 @@ app.get("/", async (req, res) => {
     dbUser: dbUser,
     monthStats: monthStats,
     publicHolidaysOnWorkdays: publicHolidaysOnWorkdays,
+    workLocationCalendars,
+    todayLocation,
+    locationWindow,
+    currentMonthNumber: currentMonthNumber || null,
+    currentYearNumber: currentYearNumber || null,
+    todayIso,
+    showTodayLocationSection,
+    isTodayRestricted,
+    todayRestrictionReason,
+    messages: req.query.blocked === 'true' 
+      ? { error: "Twoje konto zostało zablokowane przez administratora. Skontaktuj się z administratorem w celu uzyskania pomocy." }
+      : prepareMessages(req.query),
   });
 });
 
@@ -282,10 +467,11 @@ app.get("/admin", requireAuth, requireManager, async (req, res) => {
     });
   } catch (error) {
     console.error("Error loading admin dashboard:", error);
+    const isDevelopment = process.env.NODE_ENV !== 'production';
     res.status(500).render("error", {
       title: "Błąd",
       message: "Nie udało się załadować panelu administratora",
-      error: error,
+      error: isDevelopment ? error : null,
       isAuthenticated: req.oidc.isAuthenticated(),
       user: req.oidc.user,
     });
@@ -321,10 +507,11 @@ app.post(
       res.redirect(`/admin?success=${successMessage}`);
     } catch (error) {
       console.error("Error updating user role:", error);
+      const isDevelopment = process.env.NODE_ENV !== 'production';
       res.status(500).render("error", {
         title: "Błąd",
         message: "Nie udało się zaktualizować roli użytkownika",
-        error: error,
+        error: isDevelopment ? error : null,
         isAuthenticated: req.oidc.isAuthenticated(),
         user: req.oidc.user,
       });
@@ -335,6 +522,7 @@ app.post(
 // Register routes
 app.use("/dashboard", requireAuth, requireManager, dashboardRoutes);
 app.use("/work-hours", requireAuth, workHoursRoutes);
+app.use("/work-locations", requireAuth, workLocationsRoutes);
 app.use("/holidays", requireAuth, holidaysRoutes);
 app.use("/admin/groups", requireAuth, requireAdmin, groupsRoutes);
 app.use(
@@ -401,11 +589,23 @@ if (!fs.existsSync(dashboardDir)) {
 // Initialize database schema
 const initializeDb = async () => {
   try {
-    const { createSchema } = require("./db/pg-schema");
+    const { createSchema, schemaExists } = require("./db/pg-schema");
+    
+    // Check if schema already exists
+    const exists = await schemaExists();
+    
+    if (exists) {
+      console.log("PostgreSQL database schema already exists, skipping initialization");
+      return;
+    }
+    
+    // Only create schema if it doesn't exist
+    console.log("PostgreSQL database schema not found, creating...");
     await createSchema();
-    console.log("PostgreSQL database schema initialized");
+    console.log("PostgreSQL database schema initialized successfully");
   } catch (error) {
     console.error("Error initializing PostgreSQL database:", error);
+    throw error; // Fail startup if schema can't be created/verified
   }
 };
 

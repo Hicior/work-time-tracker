@@ -42,11 +42,12 @@ router.get("/", async (req, res) => {
     });
   } catch (error) {
     console.error("Error loading public holidays admin page:", error);
+    const isDevelopment = process.env.NODE_ENV !== 'production';
     res.status(500).render("error", {
       title: "Błąd",
       message:
         "Nie udało się załadować strony zarządzania dniami ustawowo wolnymi",
-      error: error,
+      error: isDevelopment ? error : null,
       isAuthenticated: req.oidc.isAuthenticated(),
       user: req.oidc.user,
       currentPage: "admin",

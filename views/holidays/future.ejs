@@ -23,7 +23,7 @@
     <a
       href="/holidays/employees/by-person"
       class="text-blue-600 font-medium hover:text-blue-800"
-      >Urlopy pracowników</a
+      >Urlopy/zdalne pracowników</a
     >
   </div>
 
@@ -34,6 +34,7 @@
         Dodaj przyszły urlop
       </h3>
       <form id="holiday-form" action="/holidays" method="POST" class="space-y-4" data-public-holidays='<%= JSON.stringify(publicHolidays.map(ph => ph.holiday_date)) %>'>
+        <%- include('../partials/csrf-field') %>
         <div>
           <label
             for="start_date"
@@ -103,8 +104,8 @@
                 <form
                   action="/holidays/<%= holiday.id %>/delete"
                   method="POST"
-                  class="inline"
-                  onsubmit="return confirm('Czy na pewno chcesz usunąć ten urlop?');">
+                  class="inline delete-holiday-form">
+                  <%- include('../partials/csrf-field') %>
                   <button type="submit" class="text-red-600 hover:text-red-800">
                     Usuń
                   </button>
@@ -144,7 +145,6 @@
     }
 
     // Set minimum date for future holidays (tomorrow)
-    const today = new Date().toISOString().split("T")[0];
     startDateInput.min = tomorrowStr;
 
     // Function to check if a date is a public holiday
@@ -153,7 +153,7 @@
     }
 
     // Function to show public holiday warning
-    function showPublicHolidayWarning(input, dateStr) {
+    function showPublicHolidayWarning(input, _dateStr) {
       // Remove existing warning
       const existingWarning = input.parentNode.querySelector('.public-holiday-warning');
       if (existingWarning) {
@@ -212,5 +212,14 @@
     if (startDateInput.value) {
       endDateInput.min = startDateInput.value;
     }
+
+    // Delete holiday form confirmations
+    document.querySelectorAll('.delete-holiday-form').forEach(form => {
+      form.addEventListener('submit', function(e) {
+        if (!confirm('Czy na pewno chcesz usunąć ten urlop?')) {
+          e.preventDefault();
+        }
+      });
+    });
   });
 </script>

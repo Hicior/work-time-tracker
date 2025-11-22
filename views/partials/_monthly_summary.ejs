@@ -1,61 +1,104 @@
-<h3 class="text-lg font-medium text-gray-900 mb-4">
-  Podsumowanie miesiąca
-  <span
-    class="inline-flex items-center rounded-md bg-blue-100 px-2 py-1 text-base font-medium text-blue-700">
-    <%= summaryData.requiredMonthlyHours %>h
-  </span>
-</h3>
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-  <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-    <div class="text-sm text-gray-500 mb-1">Przepracowane godziny</div>
-    <div class="text-xl font-semibold text-gray-900">
-      <%= summaryData.totalWorkHours %>h
-    </div>
-  </div>
-  <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-    <div class="text-sm text-gray-500 mb-1">Dni urlopowe</div>
-    <div class="text-xl font-semibold text-gray-900">
-      <%= summaryData.holidayCount %> dni <% if (typeof
-      summaryData.totalHolidayHours !== 'undefined') { %>(<%=
-      summaryData.totalHolidayHours %>h)<% } %>
-    </div>
-  </div>
-  <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-    <div class="text-sm text-gray-500 mb-1">Razem</div>
-    <div class="text-xl font-semibold text-gray-900">
-      <%= summaryData.totalCombinedHours %>h
-    </div>
-  </div>
-</div>
-<div class="mt-4 bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-  <div class="flex justify-between items-center">
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-shadow hover:shadow-md">
+  <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
     <div>
-      <div class="text-sm text-gray-500 mb-1">
-        Pozostało do przepracowania w tym miesiącu
-      </div>
-      <div class="text-xl font-semibold text-gray-900">
-        <%= summaryData.remainingHours %>h
+      <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+        Podsumowanie miesiąca
+      </h3>
+      <p class="text-sm text-gray-500 mt-1">Twój bilans godzin w bieżącym miesiącu.</p>
+    </div>
+    <% if (summaryData && summaryData.requiredMonthlyHours) { %>
+    <div class="flex items-center gap-2">
+       <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-700">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+        <span>Norma: <span class="font-bold"><%= summaryData.requiredMonthlyHours %>h</span></span>
       </div>
     </div>
-    <div class="w-1/2 bg-gray-200 rounded-full h-4">
-      <% let percent = 0; if (typeof summaryData !== 'undefined' && summaryData
-      && typeof summaryData.totalCombinedHours === 'number' && typeof
-      summaryData.requiredMonthlyHours === 'number') { percent =
-      summaryData.requiredMonthlyHours > 0 ? Math.min(100,
-      Math.round((summaryData.totalCombinedHours /
-      summaryData.requiredMonthlyHours) * 100)) : 0; } %>
-      <div
-        class="bg-blue-500 h-4 rounded-full"
-        style="width: <%= percent %>%"></div>
+    <% } %>
+  </div>
+  
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+    <!-- Work -->
+    <div class="relative flex flex-col group">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="p-2 bg-blue-50 rounded-lg text-blue-600 group-hover:bg-blue-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <span class="text-sm font-medium text-gray-500">Przepracowane</span>
+      </div>
+      <div class="flex items-baseline gap-1 ml-1">
+        <span class="text-3xl font-bold text-gray-900"><%= summaryData.totalWorkHours || 0 %></span>
+        <span class="text-base text-gray-400 font-medium">h</span>
+      </div>
+    </div>
+    
+    <!-- Holiday -->
+    <div class="relative flex flex-col group md:border-l md:border-gray-100 md:pl-8">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="p-2 bg-green-50 rounded-lg text-green-600 group-hover:bg-green-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </div>
+        <span class="text-sm font-medium text-gray-500">Urlop</span>
+      </div>
+      <div class="flex items-baseline gap-1 ml-1">
+        <span class="text-3xl font-bold text-gray-900"><%= summaryData.holidayCount || 0 %></span>
+        <span class="text-base text-gray-400 font-medium">dni</span>
+        <% if (typeof summaryData.totalHolidayHours !== 'undefined' && summaryData.totalHolidayHours > 0) { %>
+          <span class="text-sm text-gray-400 ml-1">(<%= summaryData.totalHolidayHours %>h)</span>
+        <% } %>
+      </div>
+    </div>
+    
+    <!-- Total -->
+    <div class="relative flex flex-col group md:border-l md:border-gray-100 md:pl-8">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="p-2 bg-purple-50 rounded-lg text-purple-600 group-hover:bg-purple-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <span class="text-sm font-medium text-gray-500">Razem</span>
+      </div>
+      <div class="flex items-baseline gap-1 ml-1">
+        <span class="text-3xl font-bold text-purple-600"><%= summaryData.totalCombinedHours || 0 %></span>
+        <span class="text-base text-gray-400 font-medium">h</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-gray-50 rounded-xl p-4 border border-gray-100/50">
+    <% 
+      let percent = 0; 
+      if (typeof summaryData !== 'undefined' && summaryData && typeof summaryData.totalCombinedHours === 'number' && typeof summaryData.requiredMonthlyHours === 'number') { 
+         percent = summaryData.requiredMonthlyHours > 0 
+            ? Math.min(100, Math.round((summaryData.totalCombinedHours / summaryData.requiredMonthlyHours) * 100)) 
+            : 0; 
+      } 
+      
+      let barColor = 'bg-blue-500';
+      let textColor = 'text-blue-600';
+      if (percent >= 100) { barColor = 'bg-green-500'; textColor = 'text-green-600'; }
+      else if (percent > 80) { barColor = 'bg-blue-600'; textColor = 'text-blue-700'; }
+      
+      let remaining = summaryData.remainingHours || 0;
+    %>
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex flex-col">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Postęp realizacji</span>
+         <span class="text-sm font-medium text-gray-700 mt-0.5">
+            <%= remaining > 0 ? `Pozostało ${remaining}h do normy` : 'Norma zrealizowana' %>
+         </span>
+      </div>
+      <span class="text-2xl font-bold <%= textColor %>"><%= percent %>%</span>
+    </div>
+    
+    <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+      <div class="<%= barColor %> h-2.5 rounded-full transition-all duration-1000 ease-out" style="width: <%= percent %>%"></div>
     </div>
   </div>
 </div>
-<% if (typeof showHolidayLink !== 'undefined' && showHolidayLink) { %>
-<div class="mt-4 text-right">
-  <a
-    href="/holidays"
-    class="text-blue-600 hover:text-blue-900 text-sm font-medium">
-    Zarządzaj urlopami →
-  </a>
-</div>
-<% } %>

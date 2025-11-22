@@ -1,0 +1,75 @@
+---
+description: Always read when creating scripts
+alwaysApply: false
+---
+
+# Script Creation Best Practices
+
+## Structure
+
+**File header:** Include purpose, usage instructions, and command-line options
+
+```javascript
+/**
+ * Script purpose
+ * Usage: node scripts/script-name.js [--options]
+ */
+```
+
+**Imports:** Use existing app modules (`pool`, models, utils)
+
+**Exit codes:** 0 for success, 1 for errors
+
+## Safety Features (Required for Destructive Operations)
+
+1. **Dry-run mode:** `--dry-run` flag that previews without executing
+2. **Interactive confirmation:** 5-second delay with cancel instructions (when `process.stdout.isTTY`)
+3. **Preview output:** Show what will be affected before execution
+4. **Idempotent:** Safe to run multiple times
+
+Example:
+
+```javascript
+const isDryRun = process.argv.includes("--dry-run");
+if (isDryRun) {
+  console.log("🔍 DRY RUN MODE - No changes will be made\n");
+}
+```
+
+## Output Format
+
+- Use emojis for visual hierarchy (🚀 🧪 ✅ ❌ 📊 🗑️ ⚠️ 💡)
+- Group results by user/category for readability
+- Show summaries with counts
+- Add separators for sections (`===` lines)
+
+## Error Handling
+
+```javascript
+try {
+  // main logic
+} catch (error) {
+  console.error("❌ Error:", error);
+  process.exit(1);
+}
+```
+
+## Test Scripts
+
+- Create temporary test users with unique identifiers
+- Clean up ALL test data in `finally` block
+- Return detailed pass/fail status
+- Test both success and edge cases
+
+## Database Operations
+
+- Use transactions for multi-step operations
+- Join with users table for email display
+- Verify cleanup with follow-up query
+- Use `ON CONFLICT` for safe test user creation
+
+## Command Line
+
+- Parse args with `process.argv.includes('--flag')`
+- Document all flags in file header
+- Support both interactive and automated modes

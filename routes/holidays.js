@@ -6,9 +6,11 @@
 
 const express = require("express");
 const router = express.Router();
+const { dbAsync } = require("../db/database");
 const Holiday = require("../models/Holiday");
 const PublicHoliday = require("../models/PublicHoliday");
 const WorkHours = require("../models/WorkHours");
+const WorkLocation = require("../models/WorkLocation");
 const User = require("../models/User");
 const Group = require("../models/Group");
 const {
@@ -258,13 +260,24 @@ router.post("/", async (req, res) => {
       return res.redirect("/holidays?error=no_valid_days");
     }
 
-    // Create holiday entries for each date in the range
-    for (const holiday_date of holidayDates) {
-      await Holiday.create({
-        user_id: userId,
-        holiday_date,
-      });
-    }
+    // Create holiday entries for each date in the range (using transaction for atomicity)
+    await dbAsync.transaction(async (client) => {
+      for (const holiday_date of holidayDates) {
+        // Check if holiday already exists
+        const existing = await client.query(
+          "SELECT id FROM holidays WHERE user_id = $1 AND holiday_date = $2",
+          [userId, holiday_date]
+        );
+        
+        // Only insert if doesn't exist
+        if (existing.rows.length === 0) {
+          await client.query(
+            "INSERT INTO holidays (user_id, holiday_date) VALUES ($1, $2)",
+            [userId, holiday_date]
+          );
+        }
+      }
+    });
 
     const daysCount = holidayDates.length;
     let successMessage = daysCount > 1 ? `added_${daysCount}_days` : "added";
@@ -469,17 +482,25 @@ router.get("/employees/by-date", async (req, res) => {
     // Get all users
     const allUsers = await User.getAll();
 
+    // Fetch all holidays for the date range in a single query (instead of N queries)
+    const allHolidays = await Holiday.findAllByDateRange(startDate, endDate);
+
+    // Group holidays by user_id for O(1) lookup
+    const holidaysByUser = {};
+    allHolidays.forEach((holiday) => {
+      if (!holidaysByUser[holiday.user_id]) {
+        holidaysByUser[holiday.user_id] = [];
+      }
+      holidaysByUser[holiday.user_id].push(holiday);
+    });
+
     // Initialize an empty object to hold holidays grouped by date
     const holidaysByDate = {};
 
     // Process each user
     for (const user of allUsers) {
-      // Get holidays for this user for the current month
-      const userHolidays = await Holiday.findByUserAndDateRange(
-        user.id,
-        startDate,
-        endDate
-      );
+      // Get holidays for this user from the pre-fetched map
+      const userHolidays = holidaysByUser[user.id] || [];
 
       // Process each holiday for this user
       for (const holiday of userHolidays) {
@@ -562,6 +583,30 @@ router.get("/employees/by-person", async (req, res) => {
       year
     );
 
+    // Fetch all holidays for the date range in a single query (instead of N queries)
+    const allHolidays = await Holiday.findAllByDateRange(startDate, endDate);
+
+    // Fetch all work locations for the date range in a single query
+    const allWorkLocations = await WorkLocation.findAllByDateRange(startDate, endDate);
+
+    // Group holidays by user_id for O(1) lookup
+    const holidaysByUser = {};
+    allHolidays.forEach((holiday) => {
+      if (!holidaysByUser[holiday.user_id]) {
+        holidaysByUser[holiday.user_id] = [];
+      }
+      holidaysByUser[holiday.user_id].push(holiday);
+    });
+
+    // Group work locations by user_id for O(1) lookup
+    const workLocationsByUser = {};
+    allWorkLocations.forEach((location) => {
+      if (!workLocationsByUser[location.user_id]) {
+        workLocationsByUser[location.user_id] = {};
+      }
+      workLocationsByUser[location.user_id][formatDate(location.work_date)] = location.is_onsite;
+    });
+
     const publicHolidaysMap = {};
     publicHolidaysRaw.forEach((ph) => {
       publicHolidaysMap[formatDate(ph.holiday_date)] = ph.name;
@@ -595,21 +640,41 @@ router.get("/employees/by-person", async (req, res) => {
 
     // Process each user and group them
     for (const user of allUsers) {
-      const userHolidays = await Holiday.findByUserAndDateRange(
-        user.id,
-        startDate,
-        endDate
-      );
+      // Get holidays for this user from the pre-fetched map
+      const userHolidays = holidaysByUser[user.id] || [];
       const holidayDates = userHolidays.map((h) => formatDate(h.holiday_date));
 
-      // Filter out users with no holidays in the current month
-      if (holidayDates.length > 0) {
+      // Get work locations for this user from the pre-fetched map
+      const userWorkLocations = workLocationsByUser[user.id] || {};
+
+      // Calculate remote work dates (excluding weekends, public holidays, and personal holidays)
+      const remoteDates = [];
+      for (const dateStr of daysInMonth) {
+        const dateKey = dateStr.split('T')[0];
+        const dayDate = new Date(dateStr);
+        const dayOfWeek = dayDate.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const isPublicHoliday = publicHolidaysMap[dateKey];
+        const isHoliday = holidayDates.includes(dateStr);
+        const isRemote = userWorkLocations[dateKey] === false;
+
+        // Only count remote work on working days (not weekend, not public holiday, not personal holiday)
+        if (isRemote && !isWeekend && !isPublicHoliday && !isHoliday) {
+          remoteDates.push(dateStr);
+        }
+      }
+
+      // Include users with holidays OR remote work in the current month
+      if (holidayDates.length > 0 || remoteDates.length > 0) {
         const employeeData = {
           id: user.id,
           name: user.name || user.email.split("@")[0],
           email: user.email,
           holidays: holidayDates,
           holidayCount: holidayDates.length,
+          workLocations: userWorkLocations,
+          remoteDates: remoteDates,
+          remoteDaysCount: remoteDates.length,
         };
 
         // Add user to the appropriate group
@@ -629,10 +694,18 @@ router.get("/employees/by-person", async (req, res) => {
         return a.name.localeCompare(b.name);
       });
 
-    // Calculate total number of employees with holidays
+    // Calculate statistics for employees with holidays and remote work
     let totalEmployeesWithHolidays = 0;
+    let totalEmployeesWithRemoteWork = 0;
     groupedEmployees.forEach(group => {
-      totalEmployeesWithHolidays += group.employees.length;
+      group.employees.forEach(employee => {
+        if (employee.holidayCount > 0) {
+          totalEmployeesWithHolidays++;
+        }
+        if (employee.remoteDaysCount > 0) {
+          totalEmployeesWithRemoteWork++;
+        }
+      });
     });
 
     res.render("holidays/employees-by-person", {
@@ -644,6 +717,7 @@ router.get("/employees/by-person", async (req, res) => {
       daysInMonth,
       publicHolidays: publicHolidaysMap,
       totalEmployeesWithHolidays,
+      totalEmployeesWithRemoteWork,
       isAuthenticated: req.oidc.isAuthenticated(),
       user: req.oidc.user,
       dbUser: req.user,
@@ -661,6 +735,7 @@ router.get("/employees/by-person", async (req, res) => {
       daysInMonth: [],
       publicHolidays: {},
       totalEmployeesWithHolidays: 0,
+      totalEmployeesWithRemoteWork: 0,
       isAuthenticated: req.oidc.isAuthenticated(),
       user: req.oidc.user,
       dbUser: req.user,

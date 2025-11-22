@@ -29,14 +29,8 @@
     <a
       href="/holidays/employees/by-person"
       class="text-blue-600 font-medium hover:text-blue-800"
-      >Urlopy pracowników</a
+      >Urlopy/zdalne pracowników</a
     >
-  </div>
-
-  <!-- Monthly statistics -->
-  <div class="mb-8 bg-gray-50 rounded-lg p-4">
-    <%- include('../partials/_monthly_summary', {summaryData: stats,
-    showHolidayLink: false }) %>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -44,6 +38,7 @@
     <div>
       <h3 class="text-lg font-medium text-gray-900 mb-4">Dodaj urlop</h3>
       <form id="holiday-form" action="/holidays" method="POST" class="space-y-4" data-public-holidays='<%= JSON.stringify(publicHolidaysRaw.map(ph => ph.holiday_date)) %>'>
+        <%- include('../partials/csrf-field') %>
         <div>
           <label
             for="start_date"
@@ -113,8 +108,8 @@
                 <form
                   action="/holidays/<%= holiday.id %>/delete"
                   method="POST"
-                  class="inline"
-                  onsubmit="return confirm('Czy na pewno chcesz usunąć ten urlop?');">
+                  class="inline delete-holiday-form">
+                  <%- include('../partials/csrf-field') %>
                   <button type="submit" class="text-red-600 hover:text-red-800">
                     Usuń
                   </button>
@@ -156,7 +151,7 @@
     }
 
     // Function to show public holiday warning
-    function showPublicHolidayWarning(input, dateStr) {
+    function showPublicHolidayWarning(input, _dateStr) {
       // Remove existing warning
       const existingWarning = input.parentNode.querySelector('.public-holiday-warning');
       if (existingWarning) {
@@ -215,5 +210,14 @@
     if (startDateInput.value) {
       endDateInput.min = startDateInput.value;
     }
+
+    // Delete holiday form confirmations
+    document.querySelectorAll('.delete-holiday-form').forEach(form => {
+      form.addEventListener('submit', function(e) {
+        if (!confirm('Czy na pewno chcesz usunąć ten urlop?')) {
+          e.preventDefault();
+        }
+      });
+    });
   });
 </script>

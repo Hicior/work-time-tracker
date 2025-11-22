@@ -9,25 +9,6 @@
     </a>
   </div>
 
-  <% if (messages && messages.success && messages.success !== 'user_assigned') {
-  %>
-  <div
-    class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-    <% if (messages.success === 'group_created') { %>
-    <span>Grupa została utworzona pomyślnie.</span>
-    <% } else if (messages.success === 'group_updated') { %>
-    <span>Nazwa grupy została zaktualizowana pomyślnie.</span>
-    <% } else if (messages.success === 'group_deleted') { %>
-    <span>Grupa została usunięta pomyślnie.</span>
-    <% /* user_assigned handled by top-right notification */ %> <% } %>
-  </div>
-  <% } %> <% if (messages && messages.error) { %>
-  <div
-    class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-    <span><%= messages.error %></span>
-  </div>
-  <% } %>
-
   <!-- Add New Group Form -->
   <div class="bg-white shadow-md rounded-lg overflow-hidden mb-8">
     <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
@@ -38,6 +19,7 @@
         action="/admin/groups"
         method="POST"
         class="flex flex-wrap items-end">
+        <%- include('../partials/csrf-field') %>
         <div class="w-full md:w-1/2 mb-4 md:mb-0 md:pr-2">
           <label for="name" class="block text-gray-700 text-sm font-bold mb-2"
             >Nazwa Grupy</label
@@ -89,15 +71,16 @@
               <td class="py-3 px-6 text-center">
                 <div class="flex justify-center space-x-2">
                   <button
-                    onclick="openEditModal('<%= group.id %>', '<%= group.name %>')"
-                    class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded text-xs">
+                    data-edit-group-id="<%= group.id %>"
+                    data-edit-group-name="<%= group.name %>"
+                    class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded text-xs edit-group-btn">
                     Edytuj
                   </button>
                   <form
                     action="/admin/groups/<%= group.id %>/delete"
                     method="POST"
-                    class="inline-block"
-                    onsubmit="return confirm('Czy na pewno chcesz usunąć tę grupę?');">
+                    class="inline-block delete-group-form">
+                    <%- include('../partials/csrf-field') %>
                     <button
                       type="submit"
                       class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-xs">
@@ -126,6 +109,7 @@
     </div>
     <div class="p-6">
       <form action="/admin/groups/assign-user" method="POST">
+        <%- include('../partials/csrf-field') %>
         <div class="mb-4">
           <label
             for="userSearch"
@@ -184,6 +168,7 @@
       <h3 class="text-lg font-semibold text-gray-900">Edytuj Grupę</h3>
     </div>
     <form id="editGroupForm" action="" method="POST">
+      <%- include('../partials/csrf-field') %>
       <div class="px-4 py-5">
         <label for="editName" class="block text-gray-700 text-sm font-bold mb-2"
           >Nazwa Grupy</label
@@ -198,7 +183,7 @@
       <div class="bg-gray-50 px-4 py-3 flex justify-end">
         <button
           type="button"
-          onclick="closeEditModal()"
+          id="closeEditModalBtn"
           class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2">
           Anuluj
         </button>
@@ -224,6 +209,33 @@
     document.getElementById("editGroupModal").classList.add("hidden");
   }
 
+  // Add event listeners for edit buttons
+  document.addEventListener("DOMContentLoaded", () => {
+    // Edit group buttons
+    document.querySelectorAll('.edit-group-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const groupId = this.getAttribute('data-edit-group-id');
+        const groupName = this.getAttribute('data-edit-group-name');
+        openEditModal(groupId, groupName);
+      });
+    });
+
+    // Close modal button
+    const closeBtn = document.getElementById('closeEditModalBtn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeEditModal);
+    }
+
+    // Delete group form confirmations
+    document.querySelectorAll('.delete-group-form').forEach(form => {
+      form.addEventListener('submit', function(e) {
+        if (!confirm('Czy na pewno chcesz usunąć tę grupę?')) {
+          e.preventDefault();
+        }
+      });
+    });
+  });
+
   // User search functionality
   document.addEventListener("DOMContentLoaded", () => {
     const userSearch = document.getElementById('userSearch');
@@ -231,6 +243,7 @@
     const userResults = document.getElementById('userResults');
 
     // User data from server
+    /* eslint-disable */
     const users = [
       <% users.forEach(user => { %>
         {
@@ -241,6 +254,7 @@
         },
       <% }); %>
     ];
+    /* eslint-enable */
 
     // Filter users based on search input
     function filterUsers(query) {
@@ -319,51 +333,19 @@
     });
   });
 
-  // Notification and scroll handling
+  // Scroll handling for user assignment
   document.addEventListener("DOMContentLoaded", () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const message = urlParams.get("message");
-    const error = urlParams.get("error");
+    const success = urlParams.get("success");
 
-    if (message === "user_assigned") {
-      // Show top-right notification
-      if (typeof window.showNotification === "function") {
-        window.showNotification(
-          "Użytkownik został przypisany do grupy pomyślnie.",
-          "success"
-        );
-      }
-
-      // Scroll to the assign user section
+    // Only handle scrolling - main.ejs handles the notification
+    if (success === "user_assigned") {
       const assignSection = document.getElementById("assign-user-section");
       if (assignSection) {
         // Use setTimeout to ensure rendering is complete before scrolling
         setTimeout(() => {
           assignSection.scrollIntoView({ behavior: "smooth" });
         }, 100);
-      }
-
-      // Remove the message from URL without reloading
-      if (window.history.replaceState) {
-        const cleanURL = window.location.pathname + window.location.hash; // Keep hash if exists
-        window.history.replaceState({ path: cleanURL }, "", cleanURL);
-      }
-    }
-
-    // Show error notification if exists (could be from group deletion attempt)
-    if (error) {
-      if (typeof window.showNotification === "function") {
-        let errorMessage = "Wystąpił błąd.";
-        if (error === "Cannot delete group with assigned users") {
-          errorMessage =
-            "Nie można usunąć grupy, która ma przypisanych użytkowników.";
-        }
-        window.showNotification(errorMessage, "error");
-      }
-      // Remove the error from URL without reloading
-      if (window.history.replaceState) {
-        const cleanURL = window.location.pathname + window.location.hash; // Keep hash if exists
-        window.history.replaceState({ path: cleanURL }, "", cleanURL);
       }
     }
   });

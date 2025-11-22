@@ -6,6 +6,7 @@
  * Supports operations for current, past, and future holiday management.
  */
 const { dbAsync } = require("../db/database");
+const { formatDate } = require("../utils/dateUtils");
 
 class Holiday {
   constructor(data) {
@@ -145,7 +146,7 @@ class Holiday {
 
       // Check if the specified date is a public holiday
       const isPublicHoliday = publicHolidays.some(
-        (ph) => ph.holiday_date === date
+        (ph) => formatDate(ph.holiday_date) === date
       );
 
       // Return true if either a user holiday or public holiday

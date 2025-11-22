@@ -44,7 +44,22 @@ async function createSchema() {
         total_hours REAL NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        UNIQUE(user_id, work_date)
+      )
+    `);
+
+    // Work locations table (separate from work_hours to allow planning without hours)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS work_locations (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        work_date DATE NOT NULL,
+        is_onsite BOOLEAN,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        UNIQUE(user_id, work_date)
       )
     `);
 
@@ -89,6 +104,15 @@ async function createSchema() {
     await pool.query(
       `CREATE INDEX IF NOT EXISTS idx_public_holidays_date ON public_holidays(holiday_date)`
     );
+    await pool.query(
+      `CREATE INDEX IF NOT EXISTS idx_work_locations_user_id ON work_locations(user_id)`
+    );
+    await pool.query(
+      `CREATE INDEX IF NOT EXISTS idx_work_locations_work_date ON work_locations(work_date)`
+    );
+    await pool.query(
+      `CREATE INDEX IF NOT EXISTS idx_work_locations_is_onsite ON work_locations(is_onsite)`
+    );
 
     await pool.query("COMMIT");
     console.log("PostgreSQL database schema created successfully");
@@ -96,6 +120,22 @@ async function createSchema() {
     await pool.query("ROLLBACK");
     console.error("Error creating PostgreSQL schema:", error);
     throw error;
+  }
+}
+
+async function schemaExists() {
+  try {
+    const result = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      ) as exists
+    `);
+    return result.rows[0].exists;
+  } catch (error) {
+    console.error("Error checking schema existence:", error);
+    return false;
   }
 }
 
@@ -112,4 +152,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { createSchema };
+module.exports = { createSchema, schemaExists };

@@ -26,6 +26,12 @@ const messageMap = {
       "Rola użytkownika została zmieniona na Administratora.",
     role_changed_to_user: "Rola użytkownika została zmieniona na Użytkownika.",
 
+    // Group-related messages
+    group_created: "Grupa została utworzona pomyślnie.",
+    group_updated: "Nazwa grupy została zaktualizowana pomyślnie.",
+    group_deleted: "Grupa została usunięta pomyślnie.",
+    user_assigned: "Użytkownik został przypisany do grupy pomyślnie.",
+
     // Generic messages
     added: "Pomyślnie dodano wpis.",
     deleted: "Pomyślnie usunięto wpis.",
@@ -38,6 +44,9 @@ const messageMap = {
     not_found: "Nie znaleziono wpisu.",
     unauthorized: "Brak uprawnień do wykonania tej operacji.",
     admin_only: "Ta operacja wymaga uprawnień administratora.",
+
+    // Group-related errors
+    group_has_users: "Nie można usunąć grupy, która ma przypisanych użytkowników.",
 
     // Holiday-specific errors
     invalid_date: "Proszę wybrać prawidłową datę.",

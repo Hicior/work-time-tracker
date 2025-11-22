@@ -8,12 +8,14 @@ require("dotenv").config();
 const pgTypes = require("pg-types");
 
 // Create database connection pool
+// Enable SSL for all environments with certificate validation
+// This protects against man-in-the-middle attacks in all environments
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
-      : false,
+  ssl: { rejectUnauthorized: true },
+  max: 50, // Maximum pool size
+  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+  connectionTimeoutMillis: 10000, // Return error after 10 seconds if connection cannot be established
   // Add type parsers to standardize date formats
   types: {
     getTypeParser: (dataTypeID, format) => {

@@ -1,118 +1,165 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="pl" class="h-full">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
-      <%- typeof title !== 'undefined' ? title + ' - ' : '' %>System Ewidencji
-      Czasu
+      <%- typeof title !== 'undefined' ? title + ' - ' : '' %>System Ewidencji Czasu
     </title>
     <link rel="icon" href="/images/icons8-time-16.png" />
     <link rel="stylesheet" href="/css/output.css" />
-    <% // Set default values if not provided %> <% if (typeof currentPage ===
-    'undefined') { currentPage = ''; } %>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <% if (typeof csrfToken !== 'undefined') { %>
+    <meta name="csrf-token" content="<%= csrfToken %>" />
+    <% } %>
+    <% // Set default values if not provided %> 
+    <% if (typeof currentPage === 'undefined') { currentPage = ''; } %>
     <% if (typeof currentView === 'undefined') { currentView = ''; } %>
+    
+    <style>
+      body { font-family: 'Inter', sans-serif; }
+    </style>
   </head>
-  <body class="bg-gray-50 min-h-screen flex flex-col">
+  <body class="bg-gray-50 h-full flex flex-col text-gray-900 antialiased">
     <!-- Include notification partial -->
     <%- include('../partials/notification-script') %>
 
-    <!-- Flash messages (hidden) -->
-    <div id="flash-messages" style="display: none">
-      <% if (typeof messages !== 'undefined') { %> <% if (messages.success) { %>
-      <div data-message="success"><%= messages.success %></div>
-      <% } %> <% if (messages.error) { %>
-      <div data-message="error"><%= messages.error %></div>
-      <% } %> <% if (messages.info) { %>
-      <div data-message="info"><%= messages.info %></div>
-      <% } %> <% if (messages.warning) { %>
-      <div data-message="warning"><%= messages.warning %></div>
-      <% } %> <% } %>
-    </div>
+    <!-- Flash messages -->
+    <% if (typeof messages !== 'undefined' && messages && (messages.success || messages.error || messages.info || messages.warning)) { %>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        <% if (messages.success) { %>
+        window.showNotification('<%= messages.success %>', 'success');
+        <% } %>
+        <% if (messages.error) { %>
+        window.showNotification('<%= messages.error %>', 'error');
+        <% } %>
+        <% if (messages.info) { %>
+        window.showNotification('<%= messages.info %>', 'info');
+        <% } %>
+        <% if (messages.warning) { %>
+        window.showNotification('<%= messages.warning %>', 'warning');
+        <% } %>
 
-    <header class="bg-white shadow">
+        // Clean URL query params to prevent toast on refresh
+        if (window.history.replaceState) {
+          const url = new URL(window.location);
+          url.searchParams.delete('success');
+          url.searchParams.delete('error');
+          url.searchParams.delete('info');
+          url.searchParams.delete('warning');
+          url.searchParams.delete('message'); // Clean legacy params
+          window.history.replaceState({}, '', url);
+        }
+      });
+    </script>
+    <% } %>
+
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm backdrop-blur-lg bg-white/90">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
-          <div class="flex">
+          <div class="flex items-center">
+            <!-- Logo -->
             <div class="flex-shrink-0 flex items-center">
               <img
                 src="/images/logo_2000x2000px_poziom.png"
                 alt="Kancelaria Mentzen"
-                class="h-10"
+                class="h-8 w-auto transition-transform duration-200 hover:scale-105"
                 style="image-rendering: crisp-edges" />
             </div>
-            <nav class="ml-6 flex space-x-4">
+            
+            <!-- Navigation Links -->
+            <nav class="hidden md:ml-8 md:flex md:space-x-1">
               <a
                 href="/"
-                class="<%- currentPage === 'home' ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' %> inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                class="<%= currentPage === 'home' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium' %> px-3 py-2 rounded-lg text-sm transition-all duration-200">
                 Panel główny
               </a>
-              <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated)
-              { %>
+              
+              <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
               <a
                 href="/work-hours"
-                class="<%- currentPage === 'work-hours' ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' %> inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                class="<%= currentPage === 'work-hours' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium' %> px-3 py-2 rounded-lg text-sm transition-all duration-200">
                 Czas pracy
               </a>
               <a
                 href="/holidays"
-                class="<%- currentPage === 'holidays' ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' %> inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                class="<%= currentPage === 'holidays' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium' %> px-3 py-2 rounded-lg text-sm transition-all duration-200">
                 Urlopy
               </a>
-              <% if (typeof dbUser !== 'undefined' && dbUser &&
-              dbUser.hasElevatedPermissions && dbUser.hasElevatedPermissions())
-              { %>
+              
+              <% if (typeof dbUser !== 'undefined' && dbUser && dbUser.hasElevatedPermissions && dbUser.hasElevatedPermissions()) { %>
+              <div class="h-6 w-px bg-gray-200 mx-2 self-center"></div>
+              
               <a
                 href="/admin"
-                class="<%- currentPage === 'admin' ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' %> inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                class="<%= currentPage === 'admin' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600 font-medium' %> px-3 py-2 rounded-lg text-sm transition-all duration-200">
                 Panel admina
               </a>
               <a
                 href="/work-hours/statistics"
-                class="<%- currentPage === 'admin-statistics' ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' %> inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                Statystyki pracowników
+                class="<%= currentPage === 'admin-statistics' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600 font-medium' %> px-3 py-2 rounded-lg text-sm transition-all duration-200">
+                Statystyki
               </a>
               <a
                 href="/dashboard"
-                class="<%- currentPage === 'employees-dashboard' ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' %> inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-                Dashboard czasu pracy
+                class="<%= currentPage === 'employees-dashboard' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600 font-medium' %> px-3 py-2 rounded-lg text-sm transition-all duration-200">
+                Dashboard
               </a>
-              <% } %> <% } %>
+              <% } %> 
+              <% } %>
             </nav>
           </div>
-          <div class="flex items-center">
-            <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
-            %>
-            <a href="/profile" class="flex items-center group">
+
+          <!-- Right Side -->
+          <div class="flex items-center gap-4">
+            <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
+            
+            <!-- Profile Dropdown / Link -->
+            <a href="/profile" class="group flex items-center gap-3 pl-1 pr-2 py-1 rounded-full hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all duration-200">
               <% if (user && user.picture) { %>
               <img
                 src="<%= user.picture %>"
                 alt="profile picture"
-                class="h-8 w-8 rounded-full" />
+                class="h-8 w-8 rounded-full ring-2 ring-white shadow-sm group-hover:ring-gray-200 transition-all" />
               <% } else { %>
               <div
-                class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <span class="font-medium text-blue-600"
-                  ><%= user && user.email ? user.email.charAt(0).toUpperCase() :
-                  'U' %></span
-                >
+                class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center ring-2 ring-white shadow-sm group-hover:ring-gray-200 transition-all">
+                <span class="text-sm font-bold text-blue-600">
+                  <%= user && user.email ? user.email.charAt(0).toUpperCase() : 'U' %>
+                </span>
               </div>
               <% } %>
-              <span
-                class="ml-2 text-sm font-medium text-gray-700 group-hover:text-gray-900">
-                <%= user && user.email ? user.email : 'Użytkownik' %> <% if
-                (typeof dbUser !== 'undefined' && dbUser) { %> <% if
-                (dbUser.isAdmin && dbUser.isAdmin()) { %>
-                <span class="text-xs text-blue-600 ml-1">(Admin)</span>
-                <% } else if (dbUser.isManager && dbUser.isManager()) { %>
-                <span class="text-xs text-purple-600 ml-1">(Menedżer)</span>
-                <% } %> <% } %>
-              </span>
+              
+              <div class="flex flex-col items-start hidden sm:flex">
+                <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900 leading-none mb-0.5">
+                  <%= (typeof dbUser !== 'undefined' && dbUser && dbUser.name) ? dbUser.name : (user && user.email ? user.email.split('@')[0] : 'Użytkownik') %>
+                </span>
+                <span class="text-[10px] text-gray-500 uppercase tracking-wide font-semibold group-hover:text-blue-600 transition-colors">
+                  <% if (typeof dbUser !== 'undefined' && dbUser) { %> 
+                    <% if (dbUser.isAdmin && dbUser.isAdmin()) { %>
+                    Administrator
+                    <% } else if (dbUser.isManager && dbUser.isManager()) { %>
+                    Menedżer
+                    <% } else { %>
+                    Pracownik
+                    <% } %>
+                  <% } else { %>
+                    Pracownik
+                  <% } %>
+                </span>
+              </div>
             </a>
+
+            <!-- Optional Logout Button (if handled via link/form elsewhere, usually handled in profile or separate button, but sticking to current layout which just links to profile) -->
+            
             <% } else { %>
             <a
               href="/login"
-              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 hover:shadow-md">
               Zaloguj się
             </a>
             <% } %>
@@ -127,9 +174,9 @@
       <% } else if (currentPage === 'admin') { %>
       <div class="max-w-[1600px] mx-auto py-6 sm:px-6 lg:px-8"><%- body %></div>
       <% } else if (currentView === 'by-person') { %>
-      <div class="max-w-[1400px] mx-auto py-6 sm:px-6 lg:px-8"><%- body %></div>
+      <div class="max-w-[1480px] mx-auto py-6 sm:px-6 lg:px-8"><%- body %></div>
       <% } else { %>
-      <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8"><%- body %></div>
+      <div class="max-w-6xl mx-auto py-6 sm:px-6 lg:px-8"><%- body %></div>
       <% } %>
     </main>
   </body>

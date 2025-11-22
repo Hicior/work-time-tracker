@@ -20,107 +20,19 @@ const {
 } = require("../utils/dateUtils"); // Import the helper functions
 const { prepareMessages } = require("../utils/messageUtils"); // Import message utility
 const User = require("../models/User");
+const WorkLocation = require("../models/WorkLocation");
+const { getValidDatesForEntry } = require("../utils/dateStatusService");
 
-// Helper function to get dates for the last 3 working days including weekend days in between
-const getValidDates = async () => {
-  const today = new Date();
-  const validDates = [];
-  let currentDate = new Date(today);
-  let workingDaysCount = 0;
+// Maximum realistic number of hours that can be logged in a single day
+const MAX_DAILY_HOURS = 24;
 
-  // Get public holidays for a broader date range (up to 3 months back to be safe)
-  const threeMonthsBack = new Date(today);
-  threeMonthsBack.setMonth(today.getMonth() - 3);
-  
-  // Get all public holidays that might affect our date range
-  const publicHolidaysData = [];
-  for (let monthOffset = 0; monthOffset <= 3; monthOffset++) {
-    const checkDate = new Date(today);
-    checkDate.setMonth(today.getMonth() - monthOffset);
-    const monthHolidays = await PublicHoliday.findByMonthAndYear(
-      checkDate.getMonth() + 1,
-      checkDate.getFullYear()
-    );
-    publicHolidaysData.push(...monthHolidays);
-  }
-
-  // Create a set of public holiday dates for quick lookup
-  const publicHolidayDates = new Set(
-    publicHolidaysData.map(holiday => formatDate(holiday.holiday_date))
-  );
-
-  // Check if today is a working day
-  const todayFormatted = formatDate(currentDate);
-  const isTodayWeekend = [0, 6].includes(currentDate.getDay());
-  const isTodayPublicHoliday = publicHolidayDates.has(todayFormatted);
-
-  // Add today regardless of whether it's a working day
-  validDates.push({
-    date: new Date(currentDate),
-    label: "Dzisiaj",
-    formattedDate: todayFormatted,
-    isWeekend: isTodayWeekend,
-    isPublicHoliday: isTodayPublicHoliday,
+const buildLocationMap = (locations = []) => {
+  const map = {};
+  locations.forEach((loc) => {
+    const key = formatDate(loc.work_date);
+    map[key] = loc.is_onsite;
   });
-
-  // Count today if it's a working day (not weekend and not public holiday)
-  if (!isTodayWeekend && !isTodayPublicHoliday) {
-    workingDaysCount++;
-  }
-
-  // Find dates up to the last 3 working days + weekends/holidays in between
-  let daysBack = 0;
-  while (workingDaysCount < 3 && daysBack < 30) {
-    // Increased safety limit to 30 days back
-    daysBack++;
-
-    // Move to previous day
-    const previousDate = new Date(currentDate);
-    previousDate.setDate(currentDate.getDate() - daysBack);
-
-    const dayOfWeek = previousDate.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // 0 = Sunday, 6 = Saturday
-    const previousDateFormatted = formatDate(previousDate);
-    const isPublicHoliday = publicHolidayDates.has(previousDateFormatted);
-
-    // Create label based on position
-    let label;
-    if (daysBack === 1) {
-      label = "Wczoraj";
-    } else {
-      label = getDayOfWeekName(previousDateFormatted);
-    }
-
-    // Add the date to our valid dates
-    validDates.push({
-      date: new Date(previousDate),
-      label: label,
-      formattedDate: previousDateFormatted,
-      isWeekend: isWeekend,
-      isPublicHoliday: isPublicHoliday,
-    });
-
-    // Count working days (not weekend and not public holiday)
-    if (!isWeekend && !isPublicHoliday) {
-      workingDaysCount++;
-    }
-  }
-
-  // Sort dates in descending order (most recent first)
-  validDates.sort((a, b) => b.date - a.date);
-
-  const oldToday = new Date(today);
-  const yesterday = new Date(oldToday);
-  yesterday.setDate(oldToday.getDate() - 1);
-  const dayBeforeYesterday = new Date(oldToday);
-  dayBeforeYesterday.setDate(oldToday.getDate() - 2);
-
-  return {
-    dates: validDates,
-    today: formatDate(today),
-    yesterday: formatDate(yesterday),
-    dayBeforeYesterday: formatDate(dayBeforeYesterday),
-  };
+  return map;
 };
 
 // Display work hours page
@@ -128,8 +40,22 @@ router.get("/", async (req, res) => {
   try {
     // Get authenticated user ID
     const userId = req.user.id;
-    const validDates = await getValidDates(); // Get valid working dates
+    const validDates = await getValidDatesForEntry(userId); // Get valid working dates
     const { dates, today } = validDates;
+
+    const validDateStrings = dates.map((d) => d.formattedDate);
+    const sortedValidDates = [...validDateStrings].sort();
+    const recentLocationRangeStart = sortedValidDates[0];
+    const recentLocationRangeEnd = sortedValidDates[sortedValidDates.length - 1];
+    const recentLocations =
+      recentLocationRangeStart && recentLocationRangeEnd
+        ? await WorkLocation.findByUserAndDateRange(
+            userId,
+            recentLocationRangeStart,
+            recentLocationRangeEnd
+          )
+        : [];
+    const recentLocationMap = buildLocationMap(recentLocations);
 
     // Get work hours for valid dates
     let workHours = [];
@@ -144,19 +70,59 @@ router.get("/", async (req, res) => {
     // Sort by date (descending)
     workHours.sort((a, b) => new Date(b.work_date) - new Date(a.work_date));
 
-    // Add weekday names to each entry and format dates
-    workHours.forEach((entry) => {
-      entry.weekday_name = getDayOfWeekName(entry.work_date);
-      entry.work_date = formatDateForDisplay(entry.work_date);
-    });
-
     // Check if today is a holiday (still relevant for displaying message)
     const isHolidayToday = await Holiday.isHoliday(userId, today);
+
+    // Enhance validDates with user holiday information and location data
+    const enhancedValidDates = await Promise.all(
+      dates.map(async (dateInfo) => {
+        const isUserHoliday = await Holiday.isHoliday(userId, dateInfo.formattedDate);
+        const location = recentLocationMap[dateInfo.formattedDate];
+        return {
+          ...dateInfo,
+          isUserHoliday,
+          location: location !== undefined ? location : null,
+        };
+      })
+    );
+
+    // Create a map of validDates for quick lookup
+    const validDatesMap = new Map();
+    enhancedValidDates.forEach(dateInfo => {
+      validDatesMap.set(dateInfo.formattedDate, dateInfo);
+    });
+
+    // Add weekday names to each entry and format dates
+    workHours.forEach((entry) => {
+      const dateKey = formatDate(entry.work_date);
+      if (Object.prototype.hasOwnProperty.call(recentLocationMap, dateKey)) {
+        entry.is_onsite = recentLocationMap[dateKey];
+      }
+      entry.weekday_name = getDayOfWeekName(entry.work_date);
+      
+      // Check if entry date is weekend, holiday, or public holiday using validDates data
+      const dateInfo = validDatesMap.get(dateKey);
+      if (dateInfo) {
+        entry.isWeekend = dateInfo.isWeekend || false;
+        entry.isHoliday = dateInfo.isUserHoliday || false;
+        entry.isPublicHoliday = dateInfo.isPublicHoliday || false;
+      } else {
+        // Fallback: check manually if not in validDates
+        const entryDate = new Date(entry.work_date);
+        const dayOfWeek = entryDate.getDay();
+        entry.isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        entry.isHoliday = false; // Will be checked separately if needed
+        entry.isPublicHoliday = false; // Will be checked separately if needed
+      }
+      entry.isLocationEditable = !entry.isWeekend && !entry.isHoliday && !entry.isPublicHoliday;
+      
+      entry.work_date = formatDateForDisplay(entry.work_date);
+    });
 
     // Get month and year from query parameters or use current month
     const queryMonth = parseInt(req.query.month) || new Date().getMonth() + 1;
     const queryYear = parseInt(req.query.year) || new Date().getFullYear();
-    
+
     // Validate month and year
     const currentMonth = Math.max(1, Math.min(12, queryMonth));
     const currentYear = Math.max(2020, Math.min(2030, queryYear)); // Reasonable year range
@@ -177,8 +143,13 @@ router.get("/", async (req, res) => {
     // Get all work hours for the selected month (for calendar view)
     const { startDate, endDate } = getMonthDateRange(currentYear, currentMonth);
     const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-    
+
     const monthlyWorkHours = await WorkHours.findByUserAndDateRange(
+      userId,
+      startDate,
+      endDate
+    );
+    const monthlyLocations = await WorkLocation.findByUserAndDateRange(
       userId,
       startDate,
       endDate
@@ -194,13 +165,20 @@ router.get("/", async (req, res) => {
     // Create calendar data for the current month
     const calendarData = [];
     const workHoursMap = {};
+    const locationMap = buildLocationMap(monthlyLocations);
     const holidaysMap = {};
     const publicHolidaysMap = {};
 
     // Create maps for easy lookup
     monthlyWorkHours.forEach((entry) => {
       const dateKey = formatDate(entry.work_date);
-      workHoursMap[dateKey] = entry.total_hours;
+      workHoursMap[dateKey] = {
+        total_hours: entry.total_hours,
+        is_onsite:
+          locationMap[dateKey] !== undefined
+            ? locationMap[dateKey]
+            : entry.is_onsite,
+      };
     });
 
     monthlyHolidays.forEach((holiday) => {
@@ -217,14 +195,22 @@ router.get("/", async (req, res) => {
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0); // Reset time to compare dates only
     const formattedMonth = currentMonth.toString().padStart(2, "0");
-    
+
     for (let day = 1; day <= daysInMonth; day++) {
       const dayStr = day.toString().padStart(2, "0");
       const dateStr = `${currentYear}-${formattedMonth}-${dayStr}`;
       const date = new Date(currentYear, currentMonth - 1, day);
       const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
-      
-      const hasWorkHours = workHoursMap[dateStr] > 0;
+
+      const workHoursData = workHoursMap[dateStr];
+      const hasWorkHours = workHoursData && workHoursData.total_hours > 0;
+      const locationValue =
+        locationMap[dateStr] !== undefined
+          ? locationMap[dateStr]
+          : workHoursData
+          ? workHoursData.is_onsite
+          : undefined;
+      const isRemote = locationValue === false;
       const isHoliday = holidaysMap[dateStr] || false;
       const isPublicHoliday = publicHolidaysMap[dateStr] || false;
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -237,12 +223,13 @@ router.get("/", async (req, res) => {
         date: dateStr,
         dayOfWeek,
         hasWorkHours,
+        isRemote,
         isHoliday,
         isPublicHoliday,
         isWeekend,
         isWorkday,
         isPastDate,
-        needsAttention
+        needsAttention,
       });
     }
 
@@ -278,10 +265,8 @@ router.get("/", async (req, res) => {
       title: "Czas pracy",
       currentPage: "work-hours",
       workHours, // Pass combined and sorted work hours
-      validDates: dates, // Pass valid workdays
+      validDates: enhancedValidDates, // Pass enhanced valid dates with user holiday info
       todayDate: today,
-      yesterdayDate: validDates.yesterday,
-      dayBeforeYesterdayDate: validDates.dayBeforeYesterday,
       isHolidayToday,
       publicHolidays, // Pass full public holidays list to the view
       publicHolidaysOnWorkdays, // Pass weekday public holidays array
@@ -306,7 +291,7 @@ router.get("/", async (req, res) => {
     });
   } catch (error) {
     console.error("Error loading work hours:", error);
-    const validDates = await getValidDates();
+    const validDates = await getValidDatesForEntry(req.user.id);
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
     const workDaysInMonth = getWeekdaysInMonth(currentYear, currentMonth);
@@ -318,14 +303,18 @@ router.get("/", async (req, res) => {
       workHours: [],
       validDates: validDates.dates, // Pass valid workdays even in error case
       todayDate: validDates.today,
-      yesterdayDate: validDates.yesterday,
-      dayBeforeYesterdayDate: validDates.dayBeforeYesterday,
       isHolidayToday: false,
       publicHolidays: [], // Empty array in error case
       publicHolidaysOnWorkdays: [], // Empty array in error case
       calendarData: [], // Empty calendar data in error case
-      currentMonth: Math.max(1, Math.min(12, parseInt(req.query.month) || new Date().getMonth() + 1)),
-      currentYear: Math.max(2020, Math.min(2030, parseInt(req.query.year) || new Date().getFullYear())),
+      currentMonth: Math.max(
+        1,
+        Math.min(12, parseInt(req.query.month) || new Date().getMonth() + 1)
+      ),
+      currentYear: Math.max(
+        2020,
+        Math.min(2030, parseInt(req.query.year) || new Date().getFullYear())
+      ),
       monthStats: {
         totalWorkHours: 0,
         holidayCount: 0,
@@ -350,8 +339,8 @@ router.post("/", async (req, res) => {
   try {
     // Get authenticated user ID
     const userId = req.user.id;
-    const { work_date, total_hours_str } = req.body; // Get total_hours as string
-    const validDates = await getValidDates(); // Get valid dates
+    const { work_date, total_hours_str, is_onsite } = req.body; // Get total_hours as string and is_onsite
+    const validDates = await getValidDatesForEntry(userId); // Get valid dates
 
     // Extract valid formatted dates for validation
     const validFormattedDates = validDates.dates.map((d) => d.formattedDate);
@@ -364,10 +353,26 @@ router.post("/", async (req, res) => {
 
     // 2. Validate and convert total_hours
     const total_hours = parseFloat(total_hours_str);
-    if (isNaN(total_hours) || total_hours <= 0) {
+    if (isNaN(total_hours) || total_hours <= 0 || total_hours > MAX_DAILY_HOURS) {
       return res.redirect("/work-hours?error=invalid_hours");
     }
     // --- End Validation ---
+
+    // Check if the date is a weekend or public holiday
+    const dateInfo = validDates.dates.find(
+      (d) => d.formattedDate === work_date
+    );
+    const isWeekendOrHoliday =
+      dateInfo && (dateInfo.isWeekend || dateInfo.isPublicHoliday);
+
+    // Determine is_onsite value: false for weekends/holidays, otherwise use form value
+    let isOnsiteValue;
+    if (isWeekendOrHoliday) {
+      isOnsiteValue = false;
+    } else {
+      // Convert string to boolean (form sends "true" or "false" as string)
+      isOnsiteValue = is_onsite === "true" || is_onsite === true;
+    }
 
     // Create or update work hours entry
     const existingEntries = await WorkHours.findByUserAndDate(
@@ -380,6 +385,7 @@ router.post("/", async (req, res) => {
       user_id: userId,
       work_date,
       total_hours, // Use the validated number
+      is_onsite: isOnsiteValue,
     });
 
     res.redirect(`/work-hours?success=${isUpdate ? "updated" : "added"}`);
@@ -397,9 +403,9 @@ router.post("/", async (req, res) => {
 router.post("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { total_hours_str } = req.body; // Get total_hours as string for update
+    const { total_hours_str, is_onsite } = req.body; // Get total_hours and is_onsite
     const userId = req.user.id; // Get authenticated user ID
-    const validDates = await getValidDates(); // Get valid dates
+    const validDates = await getValidDatesForEntry(userId); // Get valid dates
 
     // Extract valid formatted dates for validation
     const validFormattedDates = validDates.dates.map((d) => d.formattedDate);
@@ -419,14 +425,31 @@ router.post("/:id", async (req, res) => {
 
     // 2. Validate and convert total_hours
     const total_hours = parseFloat(total_hours_str);
-    if (isNaN(total_hours) || total_hours <= 0) {
+    if (isNaN(total_hours) || total_hours <= 0 || total_hours > MAX_DAILY_HOURS) {
       return res.redirect("/work-hours?error=invalid_hours");
     }
     // --- End Validation ---
 
+    // Check if the date is a weekend or public holiday
+    const dateInfo = validDates.dates.find(
+      (d) => d.formattedDate === workHoursEntry.work_date
+    );
+    const isWeekendOrHoliday =
+      dateInfo && (dateInfo.isWeekend || dateInfo.isPublicHoliday);
+
+    // Determine is_onsite value: false for weekends/holidays, otherwise use form value
+    let isOnsiteValue;
+    if (isWeekendOrHoliday) {
+      isOnsiteValue = false;
+    } else {
+      // Convert string to boolean (form sends "true" or "false" as string)
+      isOnsiteValue = is_onsite === "true" || is_onsite === true;
+    }
+
     // Update the entry
     await workHoursEntry.update({
       total_hours, // Use the validated number
+      is_onsite: isOnsiteValue,
     });
 
     res.redirect("/work-hours?success=updated");
@@ -445,7 +468,7 @@ router.post("/:id/delete", async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id; // Get authenticated user ID
-    const validDates = await getValidDates(); // Get valid dates
+    const validDates = await getValidDatesForEntry(userId); // Get valid dates
 
     // Extract valid formatted dates for validation
     const validFormattedDates = validDates.dates.map((d) => d.formattedDate);
@@ -517,10 +540,20 @@ router.get("/statistics", async (req, res) => {
         startDate,
         endDate
       );
+      const workLocations = await WorkLocation.findByUserAndDateRange(
+        selectedUserId,
+        startDate,
+        endDate
+      );
 
       // Format work_date in each entry to ensure consistent format
       workHours.forEach((entry) => {
         entry.work_date = formatDate(entry.work_date);
+      });
+      const locationMap = {};
+      workLocations.forEach((loc) => {
+        const dateKey = formatDate(loc.work_date);
+        locationMap[dateKey] = loc.is_onsite;
       });
 
       // Get holidays for the selected user and month
@@ -562,6 +595,12 @@ router.get("/statistics", async (req, res) => {
 
         // Find matching work hours entry
         const entry = workHours.find((h) => h.work_date === dateStr);
+        const locationValue =
+          locationMap[dateStr] !== undefined
+            ? locationMap[dateStr]
+            : entry
+            ? entry.is_onsite
+            : null;
 
         // Check if this day is a holiday
         const isHoliday = holidayDates.includes(dateStr);
@@ -575,6 +614,8 @@ router.get("/statistics", async (req, res) => {
           month: selectedMonth,
           year: selectedYear,
           hours: entry ? entry.total_hours : 0,
+          is_onsite: locationValue,
+          isRemote: locationValue === false,
           isHoliday,
           isPublicHoliday,
           isCurrentMonth: true,
@@ -613,6 +654,8 @@ router.get("/statistics", async (req, res) => {
           month: prevMonth,
           year: prevYear,
           hours: 0, // We're not loading work hours for adjacent months
+          is_onsite: null,
+          isRemote: false,
           isHoliday: false,
           isPublicHoliday: false,
           isCurrentMonth: false,
@@ -644,6 +687,8 @@ router.get("/statistics", async (req, res) => {
           month: nextMonth,
           year: nextYear,
           hours: 0, // We're not loading work hours for adjacent months
+          is_onsite: null,
+          isRemote: false,
           isHoliday: false,
           isPublicHoliday: false,
           isCurrentMonth: false,
@@ -761,15 +806,44 @@ router.post("/statistics/update", async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
-    const { user_id, work_date, total_hours } = req.body;
+    const { user_id, work_date, total_hours, is_onsite } = req.body;
 
-    // Validate input
+    // Basic presence checks
     if (!user_id || !work_date) {
       return res.status(400).json({ error: "Missing required parameters" });
     }
 
-    if (typeof total_hours !== "number" && total_hours !== 0) {
+    // Validate and normalize hours
+    const parsedHours =
+      total_hours === "" || total_hours === null || total_hours === undefined
+        ? NaN
+        : Number(total_hours);
+    if (
+      !Number.isFinite(parsedHours) ||
+      parsedHours < 0 ||
+      parsedHours > MAX_DAILY_HOURS
+    ) {
       return res.status(400).json({ error: "Invalid hours value" });
+    }
+
+    // Validate and normalize date
+    const normalizedDate = formatDate(work_date);
+    const targetDate = normalizedDate ? new Date(normalizedDate) : null;
+    const isValidDate =
+      targetDate &&
+      !Number.isNaN(targetDate.getTime()) &&
+      formatDate(targetDate) === normalizedDate;
+
+    if (!isValidDate) {
+      return res.status(400).json({ error: "Invalid work date" });
+    }
+
+    // Block future dates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    targetDate.setHours(0, 0, 0, 0);
+    if (targetDate > today) {
+      return res.status(400).json({ error: "Cannot set hours in the future" });
     }
 
     // Check if the user exists
@@ -778,27 +852,76 @@ router.post("/statistics/update", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    const isWeekend =
+      targetDate.getDay() === 0 || targetDate.getDay() === 6;
+    const isHoliday = await Holiday.isHoliday(user_id, normalizedDate);
+    const mustBeRemote = isWeekend || isHoliday;
+    const isDeletion = parsedHours === 0;
+
     // Get existing work hours for this date and user
     const existingEntries = await WorkHours.findByUserAndDate(
       user_id,
-      work_date
+      normalizedDate
     );
 
-    if (total_hours === 0) {
+    // Find any existing location (respecting previously set remote days)
+    let existingLocationValue;
+    if (existingEntries.length > 0) {
+      existingLocationValue = existingEntries[0].is_onsite;
+    } else {
+      const locationEntry = await WorkLocation.findByUserAndDate(
+        user_id,
+        normalizedDate
+      );
+      existingLocationValue = locationEntry
+        ? locationEntry.is_onsite
+        : undefined;
+    }
+    const hasExistingLocationValue =
+      existingLocationValue !== undefined && existingLocationValue !== null;
+
+    const resolvedIsOnsite = mustBeRemote
+      ? false
+      : is_onsite !== undefined
+      ? WorkLocation.normalizeIsOnsite(is_onsite)
+      : hasExistingLocationValue
+      ? existingLocationValue
+      : true;
+
+    if (isDeletion) {
+      // Only update location if explicitly provided
+      if (is_onsite !== undefined) {
+        await WorkLocation.createOrUpdate({
+          user_id,
+          work_date: normalizedDate,
+          is_onsite: resolvedIsOnsite,
+        });
+      }
+
       // Delete work hours entry if it exists
       if (existingEntries && existingEntries.length > 0) {
         await existingEntries[0].delete();
+        
+        // If no explicit location was set, also clean up any orphaned location
+        if (is_onsite === undefined) {
+          await WorkLocation.deleteByUserAndDate(user_id, normalizedDate);
+        }
+        
         return res.json({ success: true, message: "Work hours deleted" });
       } else {
-        // Nothing to delete
+        // Nothing to delete, but still clean up orphaned location if exists
+        if (is_onsite === undefined) {
+          await WorkLocation.deleteByUserAndDate(user_id, normalizedDate);
+        }
         return res.json({ success: true, message: "No work hours to delete" });
       }
     } else {
       // Create or update work hours entry
       const result = await WorkHours.createOrUpdate({
         user_id,
-        work_date,
-        total_hours,
+        work_date: normalizedDate,
+        total_hours: parsedHours,
+        is_onsite: resolvedIsOnsite,
       });
 
       return res.json({
@@ -810,6 +933,7 @@ router.post("/statistics/update", async (req, res) => {
         data: {
           id: result.id,
           total_hours: result.total_hours,
+          is_onsite: result.is_onsite,
         },
       });
     }

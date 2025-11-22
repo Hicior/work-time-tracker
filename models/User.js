@@ -68,8 +68,10 @@ class User {
       const existingUserByAuth0 = await User.findByAuth0Id(auth0User.sub);
       if (existingUserByAuth0) {
         // Update last login time and blocked status
+        // PERFORMANCE OPTIMIZATION: Only update last_login if it hasn't been updated in the last hour
+        // This prevents excessive database writes on every request while still tracking recent activity
         await dbAsync.run(
-          "UPDATE users SET last_login = CURRENT_TIMESTAMP, is_blocked = $1 WHERE id = $2",
+          "UPDATE users SET last_login = CURRENT_TIMESTAMP, is_blocked = $1 WHERE id = $2 AND (last_login IS NULL OR last_login < NOW() - INTERVAL '1 hour')",
           [auth0User.blocked || false, existingUserByAuth0.id]
         );
         return await User.findById(existingUserByAuth0.id);
@@ -78,8 +80,9 @@ class User {
       const existingUserByEmail = await User.findByEmail(auth0User.email);
       if (existingUserByEmail) {
         // Link existing account with Auth0 ID and update last login and blocked status
+        // PERFORMANCE OPTIMIZATION: Only update last_login if it hasn't been updated in the last hour
         await dbAsync.run(
-          "UPDATE users SET auth0_id = $1, last_login = CURRENT_TIMESTAMP, is_blocked = $2 WHERE id = $3",
+          "UPDATE users SET auth0_id = $1, last_login = CURRENT_TIMESTAMP, is_blocked = $2 WHERE id = $3 AND (last_login IS NULL OR last_login < NOW() - INTERVAL '1 hour')",
           [auth0User.sub, auth0User.blocked || false, existingUserByEmail.id]
         );
         return await User.findById(existingUserByEmail.id);

@@ -1,411 +1,405 @@
 <%- layout('layouts/main') %>
 
-<div class="bg-white rounded-lg shadow p-6">
-  <div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-bold text-gray-900">Ewidencja czasu pracy</h2>
+<div class="max-w-7xl mx-auto">
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
     <div>
-      <span class="text-sm text-gray-500">Dzisiaj:</span>
-      <span class="ml-1 font-medium"><%= todayDate %></span>
+      <h1 class="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+        <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        Ewidencja czasu pracy
+      </h1>
+      <p class="text-gray-500 mt-1 text-sm ml-[52px]">Zarządzaj swoim czasem pracy i przeglądaj historię.</p>
+    </div>
+    <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-100">
+      <span class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Dzisiaj:</span>
+      <span class="font-bold text-gray-900"><%= todayDate %></span>
     </div>
   </div>
 
-  <!-- Monthly statistics -->
-  <div class="mb-8 bg-gray-50 rounded-lg p-4">
-    <%- include('../partials/_monthly_summary', {summaryData: monthStats,
-    showHolidayLink: true }) %>
-  </div>
-
-  <!-- Two-column layout for entry form and history -->
-  <div
-    class="grid grid-cols-1 md:grid-cols-2 gap-4 md:divide-x md:divide-gray-300">
-    <!-- Left column: Add new entry -->
-    <div class="md:pr-5">
-      <h3 class="text-lg font-medium text-gray-900 mb-3">Dodaj nowy wpis</h3>
-      <form action="/work-hours" method="POST" class="p-3">
-        <div class="mb-4">
-          <label
-            for="work_date"
-            class="block text-sm font-medium text-gray-700 mb-1"
-            >Data</label
-          >
-          <select
-            id="work_date"
-            name="work_date"
-            class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2"
-            required>
-            <% validDates.forEach(dateInfo => { %>
-            <option value="<%= dateInfo.formattedDate %>">
-              <%= dateInfo.label %> (<%= dateInfo.formattedDate %>)<% if (dateInfo.isWeekend) { %> - Weekend<% } %><% if (dateInfo.isPublicHoliday) { %> - Święto<% } %>
-            </option>
-            <% }); %>
-          </select>
-        </div>
-
-        <div class="mb-6">
-          <div class="flex justify-between items-center mb-4">
-            <label
-              for="hours_input"
-              class="block text-sm font-medium text-gray-700"
-              >Liczba godzin:
-              <span id="hours_value" class="font-semibold">8</span></label
-            >
-            <div class="flex space-x-2">
-              <button
-                type="button"
-                onclick="setHours(8)"
-                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
-                8h
-              </button>
-              <button
-                type="button"
-                onclick="setHours(9)"
-                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
-                9h
-              </button>
-              <button
-                type="button"
-                onclick="setHours(10)"
-                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
-                10h
-              </button>
-              <button
-                type="button"
-                onclick="setHours(11)"
-                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
-                11h
-              </button>
-              <button
-                type="button"
-                onclick="setHours(12)"
-                class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
-                12h
-              </button>
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+    <!-- Left column: Add new entry & Calendar -->
+    <div class="xl:col-span-2 space-y-8">
+      <!-- Add Entry Card -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
+          <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Nowy wpis
+        </h3>
+        
+        <form action="/work-hours" method="POST" class="space-y-6">
+          <%- include('../partials/csrf-field') %>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Date Selection -->
+            <div>
+              <label for="work_date" class="block text-sm font-medium text-gray-700 mb-2">Wybierz dzień</label>
+              <div class="relative">
+                <select
+                  id="work_date"
+                  name="work_date"
+                  class="appearance-none block w-full pl-4 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium shadow-sm bg-gray-50 hover:bg-white transition-colors cursor-pointer"
+                  required>
+                  <% validDates.forEach(dateInfo => { %>
+                  <option value="<%= dateInfo.formattedDate %>" class="py-2">
+                    <%= dateInfo.label %> (<%= dateInfo.formattedDate %>)<% if (dateInfo.isWeekend) { %> - Weekend<% } %><% if (dateInfo.isPublicHoliday) { %> - Święto<% } %>
+                  </option>
+                  <% }); %>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div class="mt-3">
-            <div class="flex items-center justify-center">
-              <button
-                type="button"
-                onclick="decrementHours()"
-                class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm py-2 px-4 rounded-l focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 hours-control-btn">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor">
-                  <path
-                    fill-rule="evenodd"
-                    d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                    clip-rule="evenodd" />
-                </svg>
-              </button>
-              <input
-                type="number"
-                id="hours_input"
-                min="0.5"
-                max="24"
-                step="0.5"
-                value="8"
-                class="focus:ring-blue-500 focus:border-blue-500 text-center w-24 shadow-sm text-lg font-medium border-gray-300 p-2 hours-input"
-                oninput="updateHoursValue(this.value)"
-                onclick="this.select()" />
-              <button
-                type="button"
-                onclick="incrementHours()"
-                class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm py-2 px-4 rounded-r focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 hours-control-btn">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor">
-                  <path
-                    fill-rule="evenodd"
-                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                    clip-rule="evenodd" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Hidden input to actually submit the value -->
-          <input
-            type="hidden"
-            id="total_hours"
-            name="total_hours_str"
-            value="8" />
-        </div>
-
-        <div class="mt-4">
-          <button
-            type="submit"
-            class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            Dodaj wpis
-          </button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Right column: Entry history -->
-    <div class="md:pl-5">
-      <h3 class="text-lg font-medium text-gray-900 mb-3">
-        Twoje wpisy (Ostatnie 3 dni robocze)
-      </h3>
-
-      <% if (workHours && workHours.length > 0) { %>
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th
-                scope="col"
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Data
-              </th>
-              <th
-                scope="col"
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Liczba godzin
-              </th>
-              <th
-                scope="col"
-                class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Akcje
-              </th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <% workHours.forEach(entry => { %>
-            <tr id="entry-row-<%= entry.id %>">
-              <td
-                class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                <%= entry.weekday_name %> (<%= entry.work_date %>)
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                <%= entry.total_hours %>h
-              </td>
-              <td
-                class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button
-                  onclick="toggleEditForm('<%= entry.id %>')"
-                  class="text-blue-600 hover:text-blue-800 mr-2">
-                  Edytuj
-                </button>
-                <form
-                  action="/work-hours/<%= entry.id %>/delete"
-                  method="POST"
-                  class="inline"
-                  onsubmit="return confirm('Czy na pewno chcesz usunąć ten wpis?');">
-                  <button type="submit" class="text-red-600 hover:text-red-800">
-                    Usuń
+            <!-- Location Toggle -->
+            <div id="location_toggle_wrapper">
+               <label class="block text-sm font-medium text-gray-700 mb-2">Lokalizacja</label>
+               <div class="flex p-1 bg-gray-100 rounded-xl w-full" id="location_toggle_container">
+                  <button
+                    type="button"
+                    id="badge_onsite"
+                    data-location-toggle="true"
+                    class="flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm bg-white text-blue-700">
+                    Stacjonarnie
                   </button>
-                </form>
-              </td>
-            </tr>
-            <tr id="edit-form-row-<%= entry.id %>" class="hidden bg-gray-50">
-              <td colspan="3" class="px-6 py-4">
-                <form
-                  action="/work-hours/<%= entry.id %>"
-                  method="POST"
-                  class="grid grid-cols-3 gap-4 items-end">
-                  <div>
-                    <label
-                      for="edit_total_hours_<%= entry.id %>"
-                      class="block text-sm font-medium text-gray-700"
-                      >Liczba godzin</label
-                    >
-                    <input
-                      type="number"
-                      step="0.01"
-                      id="edit_total_hours_<%= entry.id %>"
-                      name="total_hours_str"
-                      value="<%= entry.total_hours %>"
-                      min="0.01"
-                      class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2.5"
-                      required />
-                  </div>
-                  <div class="flex space-x-2">
+                  <button
+                    type="button"
+                    id="badge_remote"
+                    data-location-toggle="false"
+                    class="flex-1 py-2 px-4 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 transition-all duration-200">
+                    Zdalnie
+                  </button>
+                </div>
+               <div id="location_toggle_disabled" class="hidden">
+                  <div class="flex p-1 bg-gray-100 rounded-xl w-full">
                     <button
-                      type="submit"
-                      class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-500 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                      Zapisz
+                      type="button"
+                      disabled
+                      class="flex-1 py-2 px-4 rounded-lg text-sm font-medium bg-gray-50 text-gray-400 cursor-not-allowed opacity-60">
+                      Stacjonarnie
                     </button>
                     <button
                       type="button"
-                      onclick="toggleEditForm('<%= entry.id %>')"
-                      class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-                      Anuluj
+                      disabled
+                      class="flex-1 py-2 px-4 rounded-lg text-sm font-medium bg-gray-50 text-gray-400 cursor-not-allowed opacity-60">
+                      Zdalnie
                     </button>
                   </div>
+               </div>
+            </div>
+          </div>
+
+          <!-- Hours Selection -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-3">Liczba godzin</label>
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+              <!-- Counter -->
+              <div class="flex items-center bg-gray-50 rounded-xl p-1 border border-gray-200 shadow-sm w-full sm:w-auto">
+                <button
+                  type="button"
+                  id="decrement_hours_btn"
+                  class="p-3 text-gray-500 hover:text-gray-700 hover:bg-white rounded-lg transition-colors focus:outline-none">
+                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                  </svg>
+                </button>
+                <input
+                  type="number"
+                  id="hours_input"
+                  min="0.5"
+                  max="24"
+                  step="0.5"
+                  value="8"
+                  class="w-12 text-center border-0 bg-transparent text-xl font-bold text-gray-900 focus:ring-0 p-0" />
+                <button
+                  type="button"
+                  id="increment_hours_btn"
+                  class="p-3 text-gray-500 hover:text-gray-700 hover:bg-white rounded-lg transition-colors focus:outline-none">
+                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Quick Presets -->
+              <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                <% [8, 9, 10, 12].forEach(h => { %>
+                <button
+                  type="button"
+                  data-set-hours="<%= h %>"
+                  class="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all">
+                  <%= h %>h
+                </button>
+                <% }) %>
+              </div>
+            </div>
+            
+            <input type="hidden" id="total_hours" name="total_hours_str" value="8" />
+            <input type="hidden" id="is_onsite_input" name="is_onsite" value="true" />
+          </div>
+
+          <div class="pt-2">
+            <button
+              type="submit"
+              class="w-full md:w-auto inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-bold rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              Zatwierdź wpis
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Monthly Calendar View -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 overflow-hidden">
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+          <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Kalendarz - <%= ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień',
+            'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik',
+            'Listopad', 'Grudzień'][currentMonth] %> <%= currentYear %>
+          </h3>
+          
+          <!-- Month Navigation -->
+          <div class="flex items-center bg-gray-50 p-1 rounded-lg border border-gray-200 shadow-sm" id="monthNavigation" data-current-month="<%= currentMonth %>" data-current-year="<%= currentYear %>">
+             <button id="navigatePrevMonth" class="p-1.5 rounded-md hover:bg-white hover:shadow-sm text-gray-500 transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <div class="flex items-center px-2 gap-1">
+                <a href="#" id="prevMonthBtn" class="hidden md:block px-2 py-1 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors"></a>
+                <span id="currentMonthBtn" class="px-3 py-1 text-sm font-bold text-gray-900"></span>
+                <a href="#" id="nextMonthBtn" class="hidden md:block px-2 py-1 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors"></a>
+            </div>
+            <button id="navigateNextMonth" class="p-1.5 rounded-md hover:bg-white hover:shadow-sm text-gray-500 transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-7 gap-2 mb-2">
+          <% ['Pon', 'Wto', 'Śro', 'Czw', 'Pią', 'Sob', 'Nie'].forEach(day => { %>
+            <div class="text-center text-xs font-bold text-gray-400 uppercase tracking-wider py-2"><%= day %></div>
+          <% }) %>
+        </div>
+
+        <div class="grid grid-cols-7 gap-2">
+          <% 
+          const firstDay = new Date(currentYear, currentMonth - 1, 1);
+          const firstDayOfWeek = (firstDay.getDay() + 6) % 7;
+          for (let i = 0; i < firstDayOfWeek; i++) { %>
+          <div class="h-12 sm:h-20 bg-gray-50/30 rounded-lg"></div>
+          <% } %> 
+          <% calendarData.forEach(day => { 
+            let dayClass = 'h-12 sm:h-20 flex flex-col items-start justify-between p-2 rounded-lg border transition-all duration-200 relative group ';
+            let isWorkingDay = day.isWorkday;
+            
+            if (day.isWeekend) { 
+              dayClass += 'bg-gray-50 text-gray-400 border-transparent'; 
+            } else if (day.isHoliday) { 
+              dayClass += 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'; 
+            } else if (day.isPublicHoliday) { 
+              dayClass += 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'; 
+            } else if (isWorkingDay) { 
+              dayClass += 'bg-green-50 text-green-700 border-green-200 hover:border-green-300 hover:shadow-sm'; 
+            } else { 
+              dayClass += 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:shadow-sm'; 
+            } %>
+          <div class="<%= dayClass %>" title="<%= day.date %>">
+            <span class="text-xs sm:text-sm font-bold <%= day.isWeekend ? 'opacity-50' : '' %>"><%= day.day %></span>
+            
+            <% if (day.isWeekend) { %>
+             <div class="self-end mt-auto">
+                <div class="hidden sm:flex items-center gap-1 text-xs font-medium bg-white/60 px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+                   <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" /></svg>
+                   <span>weekend</span>
+                </div>
+                <div class="sm:hidden w-2 h-2 bg-current rounded-full mb-1 mr-1"></div>
+             </div>
+            <% } else if (day.isPublicHoliday) { %>
+             <div class="self-end mt-auto">
+                <div class="hidden sm:flex items-center gap-1 text-xs font-medium bg-white/60 px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+                   <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" /></svg>
+                   <span>święto</span>
+                </div>
+                <div class="sm:hidden w-2 h-2 bg-current rounded-full mb-1 mr-1"></div>
+             </div>
+            <% } else if (day.isHoliday) { %>
+             <div class="self-end mt-auto">
+                <div class="hidden sm:flex items-center gap-1 text-xs font-medium bg-white/60 px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+                   <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" /></svg>
+                   <span>urlop</span>
+                </div>
+                <div class="sm:hidden w-2 h-2 bg-current rounded-full mb-1 mr-1"></div>
+             </div>
+            <% } else if (day.hasWorkHours) { %>
+             <div class="self-end mt-auto">
+                <div class="hidden sm:flex items-center gap-1 text-xs font-medium bg-white/60 px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+                   <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" /></svg>
+                   <span>OK</span>
+                </div>
+                <div class="sm:hidden w-2 h-2 bg-current rounded-full mb-1 mr-1"></div>
+             </div>
+            <% } else if (isWorkingDay && day.needsAttention) { %>
+              <div class="absolute top-1 right-1">
+                 <span class="relative flex h-2.5 w-2.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                </span>
+              </div>
+            <% } %>
+          </div>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column: History -->
+    <div class="xl:col-span-1">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-24">
+        <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Ostatnie wpisy
+        </h3>
+
+        <% if (workHours && workHours.length > 0) { %>
+        <div class="space-y-3">
+          <% workHours.forEach(entry => { %>
+          <div id="entry-card-<%= entry.id %>" class="group p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all bg-white">
+            <div class="flex justify-between items-start mb-2">
+              <div>
+                <div class="text-sm font-bold text-gray-900"><%= entry.weekday_name %></div>
+                <div class="text-xs text-gray-500"><%= entry.work_date %></div>
+              </div>
+              <div class="text-lg font-bold text-gray-900"><%= entry.total_hours %>h</div>
+            </div>
+            
+            <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
+              <div>
+                <% if (entry.is_onsite === null) { %>
+                <span class="text-xs text-gray-400">-</span>
+                <% } else if (entry.is_onsite) { %>
+                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
+                  <div class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></div> Biuro
+                </span>
+                <% } else { %>
+                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-50 text-cyan-700">
+                  <div class="w-1.5 h-1.5 rounded-full bg-cyan-500 mr-1.5"></div> Zdalnie
+                </span>
+                <% } %>
+              </div>
+              
+              <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  data-toggle-edit="<%= entry.id %>"
+                  class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edytuj">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                </button>
+                <form action="/work-hours/<%= entry.id %>/delete" method="POST" class="inline delete-entry-form">
+                  <%- include('../partials/csrf-field') %>
+                  <button type="submit" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Usuń">
+                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
                 </form>
-              </td>
-            </tr>
-            <% }); %>
-          </tbody>
-        </table>
-      </div>
-      <% } else { %>
-      <div class="p-3">
-        <p class="text-gray-700">Brak wpisów dla ostatnich dni.</p>
-      </div>
-      <% } %>
-    </div>
-  </div>
+              </div>
+            </div>
+          </div>
 
-  <!-- Monthly Calendar View -->
-  <div class="mt-8 bg-gray-50 rounded-lg p-6">
-    <div class="flex justify-between items-center mb-6">
-      <h3 class="text-lg font-medium text-gray-900">
-        Przegląd miesięczny - 
-        <%= ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 
-             'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'][currentMonth] %> <%= currentYear %>
-      </h3>
-      <div class="flex items-center space-x-4">
-        <!-- Month Navigation -->
-        <div class="flex items-center space-x-1" id="monthNavigation" 
-             data-current-month="<%= currentMonth %>" data-current-year="<%= currentYear %>">
-          <!-- Previous month button -->
-          <button onclick="navigateMonth(-1)" 
-                  class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          
-          <!-- Previous month -->
-          <a href="#" id="prevMonthBtn" 
-             class="px-3 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
-          </a>
-          
-          <!-- Current month -->
-          <a href="#" id="currentMonthBtn" class="px-3 py-2 text-sm rounded-md font-medium">
-          </a>
-          
-          <!-- Next month -->
-          <a href="#" id="nextMonthBtn" 
-             class="px-3 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
-          </a>
-          
-          <!-- Next month button -->
-          <button onclick="navigateMonth(1)" 
-                  class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
-          </button>
+          <!-- Edit Form Card (Hidden) -->
+          <div id="edit-form-row-<%= entry.id %>" class="hidden p-4 rounded-xl border border-blue-200 bg-blue-50/50">
+             <form action="/work-hours/<%= entry.id %>" method="POST" class="space-y-3">
+                <%- include('../partials/csrf-field') %>
+                <div class="flex justify-between items-center">
+                   <span class="text-xs font-bold text-blue-800 uppercase tracking-wide">Edycja wpisu</span>
+                   <button type="button" data-toggle-edit="<%= entry.id %>" class="text-gray-400 hover:text-gray-600">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                   </button>
+                </div>
+                
+                <div>
+                   <label class="block text-xs font-medium text-gray-600 mb-2">Godziny</label>
+                   <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm p-0.5">
+                      <button
+                        type="button"
+                        class="edit-decrement-hours-<%= entry.id %> p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-md transition-colors focus:outline-none"
+                        data-entry-id="<%= entry.id %>">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                        </svg>
+                      </button>
+                      <input
+                        type="number"
+                        id="edit_hours_input_<%= entry.id %>"
+                        name="total_hours_str"
+                        min="0.5"
+                        max="24"
+                        step="0.5"
+                        value="<%= entry.total_hours %>"
+                        class="flex-1 text-center border-0 bg-transparent text-base font-bold text-gray-900 focus:ring-0 p-0 mx-2"
+                        required />
+                      <button
+                        type="button"
+                        class="edit-increment-hours-<%= entry.id %> p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-md transition-colors focus:outline-none"
+                        data-entry-id="<%= entry.id %>">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
+                   </div>
+                </div>
+
+                <% if (entry.isLocationEditable !== false) { %>
+                <div>
+                   <label class="block text-xs font-medium text-gray-600 mb-1">Lokalizacja</label>
+                   <div class="flex bg-white rounded-lg border border-gray-200 p-0.5">
+                      <button type="button" id="edit_badge_onsite_<%= entry.id %>" data-edit-location-toggle="true" data-entry-id="<%= entry.id %>" class="flex-1 py-1 text-xs font-medium rounded-md <%= entry.is_onsite ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700' %>">Biuro</button>
+                      <button type="button" id="edit_badge_remote_<%= entry.id %>" data-edit-location-toggle="false" data-entry-id="<%= entry.id %>" class="flex-1 py-1 text-xs font-medium rounded-md <%= entry.is_onsite === false ? 'bg-cyan-100 text-cyan-700' : 'text-gray-500 hover:text-gray-700' %>">Zdalnie</button>
+                   </div>
+                   <input type="hidden" id="edit_is_onsite_<%= entry.id %>" name="is_onsite" value="<%= entry.is_onsite %>" />
+                </div>
+                <% } %>
+
+                <button type="submit" class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm">Zapisz zmiany</button>
+             </form>
+          </div>
+          <% }); %>
         </div>
-      </div>
-    </div>
-    
-    <div class="grid grid-cols-7 gap-2 mb-3">
-      <!-- Week day headers -->
-      <div class="bg-gray-200 rounded-lg py-2 px-1">
-        <div class="text-center text-xs font-semibold text-gray-700">Pon</div>
-      </div>
-      <div class="bg-gray-200 rounded-lg py-2 px-1">
-        <div class="text-center text-xs font-semibold text-gray-700">Wto</div>
-      </div>
-      <div class="bg-gray-200 rounded-lg py-2 px-1">
-        <div class="text-center text-xs font-semibold text-gray-700">Śro</div>
-      </div>
-      <div class="bg-gray-200 rounded-lg py-2 px-1">
-        <div class="text-center text-xs font-semibold text-gray-700">Czw</div>
-      </div>
-      <div class="bg-gray-200 rounded-lg py-2 px-1">
-        <div class="text-center text-xs font-semibold text-gray-700">Pią</div>
-      </div>
-      <div class="bg-gray-200 rounded-lg py-2 px-1">
-        <div class="text-center text-xs font-semibold text-gray-700">Sob</div>
-      </div>
-      <div class="bg-gray-200 rounded-lg py-2 px-1">
-        <div class="text-center text-xs font-semibold text-gray-700">Nie</div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-7 gap-2">
-      <% 
-      // Calculate empty cells for the beginning of the month
-      const firstDay = new Date(currentYear, currentMonth - 1, 1);
-      const firstDayOfWeek = (firstDay.getDay() + 6) % 7; // Convert to Monday = 0
-      
-      // Add empty cells for days before the first day of the month
-      for (let i = 0; i < firstDayOfWeek; i++) { %>
-        <div class="h-10"></div>
-      <% } %>
-
-      <% calendarData.forEach(day => { 
-        let dayClass = 'h-10 flex items-center justify-center text-sm font-medium rounded-lg border relative ';
-        let isWorkingDay = day.isWorkday; // Monday-Friday excluding public holidays and personal holidays
-        
-        if (day.isWeekend) {
-          // Weekend - neutral gray
-          dayClass += 'bg-gray-100 text-gray-500 border-gray-200';
-        } else if (day.isHoliday) {
-          // Personal holiday - blue
-          dayClass += 'bg-blue-100 text-blue-700 border-blue-200';
-        } else if (day.isPublicHoliday) {
-          // Public holiday - purple
-          dayClass += 'bg-purple-100 text-purple-700 border-purple-200';
-        } else if (isWorkingDay) {
-          // Working day (Mon-Fri, not holiday)
-          dayClass += 'bg-green-100 text-green-700 border-green-200';
-        } else {
-          // Regular day
-          dayClass += 'bg-white text-gray-700 border-gray-200';
-        }
-      %>
-        <div class="<%= dayClass %>" title="<%= day.date %>">
-          <span><%= day.day %></span>
-          <% if (day.hasWorkHours) { %>
-            <!-- Clock icon for days with entered hours -->
-            <svg class="absolute top-1 right-1 w-3.5 h-3.5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-            </svg>
-          <% } else if (isWorkingDay && day.needsAttention) { %>
-            <!-- Warning icon for working days without hours (past days only) -->
-            <svg class="absolute top-1 right-1 w-3.5 h-3.5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-            </svg>
-          <% } %>
+        <% } else { %>
+        <div class="text-center py-8">
+          <div class="bg-gray-50 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
+             <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+          </div>
+          <p class="text-sm text-gray-500">Brak wpisów dla ostatnich dni.</p>
         </div>
-      <% }); %>
-    </div>
-
-    <!-- Legend -->
-    <div class="mt-4 flex flex-wrap gap-4 text-xs">
-      <div class="flex items-center gap-2">
-        <div class="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
-        <span class="text-gray-600">Dni robocze</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <div class="w-4 h-4 bg-blue-100 border border-blue-200 rounded"></div>
-        <span class="text-gray-600">Urlop</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <div class="w-4 h-4 bg-purple-100 border border-purple-200 rounded"></div>
-        <span class="text-gray-600">Święto państwowe</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
-        <span class="text-gray-600">Weekend</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-        </svg>
-        <span class="text-gray-600">Wpisane godziny</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <svg class="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-        </svg>
-        <span class="text-gray-600">Brak wpisanych godzin (dni robocze)</span>
+        <% } %>
       </div>
     </div>
   </div>
 </div>
 
 <script>
+  // Valid dates data from backend
+  /* eslint-disable */
+  const validDatesData = <%- JSON.stringify(validDates.map(d => ({
+    formattedDate: d.formattedDate,
+    isWeekend: d.isWeekend,
+    isPublicHoliday: d.isPublicHoliday,
+    isUserHoliday: d.isUserHoliday,
+    location: d.location !== undefined ? d.location : null
+  }))) %>;
+  /* eslint-enable */
+
   // Functions for hours input
   function updateHoursValue(value) {
     // Convert comma to dot for decimal point
@@ -415,9 +409,11 @@
     let numValue = parseFloat(value);
 
     if (!isNaN(numValue)) {
-      // Update displayed value
-      document.getElementById("hours_value").textContent = numValue;
-      document.getElementById("total_hours").value = numValue;
+      // Update hidden input value
+      const totalHoursInput = document.getElementById("total_hours");
+      if (totalHoursInput) {
+        totalHoursInput.value = numValue;
+      }
     }
   }
 
@@ -436,18 +432,23 @@
     value = Math.round(value * 2) / 2;
 
     // Update all values
-    document.getElementById("hours_value").textContent = value;
-    document.getElementById("total_hours").value = value;
+    const totalHoursInput = document.getElementById("total_hours");
+    if (totalHoursInput) {
+      totalHoursInput.value = value;
+    }
     input.value = value;
   }
 
   function setHours(value) {
-    document.getElementById("hours_input").value = value;
+    const input = document.getElementById("hours_input");
+    if (!input) return;
+    input.value = value;
     updateHoursValue(value);
   }
 
   function incrementHours() {
     const input = document.getElementById("hours_input");
+    if (!input) return;
     const currentValue = parseFloat(input.value.replace(",", ".")) || 0.5;
     const newValue = Math.min(24, currentValue + 0.5);
     input.value = newValue;
@@ -456,91 +457,348 @@
 
   function decrementHours() {
     const input = document.getElementById("hours_input");
+    if (!input) return;
     const currentValue = parseFloat(input.value.replace(",", ".")) || 0.5;
     const newValue = Math.max(0.5, currentValue - 0.5);
     input.value = newValue;
     updateHoursValue(newValue);
   }
 
-  function toggleEditForm(id) {
-    const row = document.getElementById(`entry-row-${id}`);
-    const form = document.getElementById(`edit-form-row-${id}`);
-    row.classList.toggle("hidden");
-    form.classList.toggle("hidden");
+  function incrementEditHours(entryId) {
+    const input = document.getElementById(`edit_hours_input_${entryId}`);
+    if (!input) return;
+    const currentValue = parseFloat(input.value.replace(",", ".")) || 0.5;
+    const newValue = Math.min(24, currentValue + 0.5);
+    input.value = newValue;
   }
 
-  // Add event listener for validation when the input loses focus
+  function decrementEditHours(entryId) {
+    const input = document.getElementById(`edit_hours_input_${entryId}`);
+    if (!input) return;
+    const currentValue = parseFloat(input.value.replace(",", ".")) || 0.5;
+    const newValue = Math.max(0.5, currentValue - 0.5);
+    input.value = newValue;
+  }
+
+  function toggleEditForm(id) {
+    const card = document.getElementById(`entry-card-${id}`);
+    const form = document.getElementById(`edit-form-row-${id}`);
+    
+    if (card.style.display === 'none') {
+        card.style.display = '';
+        form.classList.add('hidden');
+    } else {
+        card.style.display = 'none';
+        form.classList.remove('hidden');
+    }
+
+    // Attach event listeners to edit form location toggle badges when form is shown
+    if (!form.classList.contains("hidden")) {
+      const onsiteBadge = document.getElementById(`edit_badge_onsite_${id}`);
+      const remoteBadge = document.getElementById(`edit_badge_remote_${id}`);
+
+      if (onsiteBadge && !onsiteBadge.hasAttribute("data-listener-attached")) {
+        onsiteBadge.setAttribute("data-listener-attached", "true");
+        onsiteBadge.addEventListener("click", function () {
+          toggleEditLocation(id, true);
+        });
+      }
+
+      if (remoteBadge && !remoteBadge.hasAttribute("data-listener-attached")) {
+        remoteBadge.setAttribute("data-listener-attached", "true");
+        remoteBadge.addEventListener("click", function () {
+          toggleEditLocation(id, false);
+        });
+      }
+
+      // Attach event listeners to increment/decrement buttons
+      const incrementBtn = form.querySelector(`.edit-increment-hours-${id}`);
+      const decrementBtn = form.querySelector(`.edit-decrement-hours-${id}`);
+
+      if (incrementBtn && !incrementBtn.hasAttribute("data-listener-attached")) {
+        incrementBtn.setAttribute("data-listener-attached", "true");
+        incrementBtn.addEventListener("click", function () {
+          incrementEditHours(id);
+        });
+      }
+
+      if (decrementBtn && !decrementBtn.hasAttribute("data-listener-attached")) {
+        decrementBtn.setAttribute("data-listener-attached", "true");
+        decrementBtn.addEventListener("click", function () {
+          decrementEditHours(id);
+        });
+      }
+
+      // Attach click event listener to select input value when clicked
+      const hoursInput = document.getElementById(`edit_hours_input_${id}`);
+      if (hoursInput && !hoursInput.hasAttribute("data-listener-attached")) {
+        hoursInput.setAttribute("data-listener-attached", "true");
+        hoursInput.addEventListener("click", function () {
+          this.select();
+        });
+      }
+    }
+  }
+
+  // Toggle location (onsite/remote)
+  function toggleLocation(isOnsite) {
+    const onsiteBadge = document.getElementById("badge_onsite");
+    const remoteBadge = document.getElementById("badge_remote");
+    const hiddenInput = document.getElementById("is_onsite_input");
+
+    if (isOnsite) {
+      // Set to onsite (stacjonarnie)
+      onsiteBadge.className = "flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all duration-200 shadow-sm bg-white text-blue-700 ring-1 ring-gray-200";
+      remoteBadge.className = "flex-1 py-2 px-4 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 transition-all duration-200";
+      hiddenInput.value = "true";
+    } else {
+      // Set to remote (zdalnie)
+      remoteBadge.className = "flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all duration-200 shadow-sm bg-white text-cyan-700 ring-1 ring-gray-200";
+      onsiteBadge.className = "flex-1 py-2 px-4 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 transition-all duration-200";
+      hiddenInput.value = "false";
+    }
+  }
+
+  // Toggle location for edit form
+  function toggleEditLocation(entryId, isOnsite) {
+    const onsiteBadge = document.getElementById(`edit_badge_onsite_${entryId}`);
+    const remoteBadge = document.getElementById(`edit_badge_remote_${entryId}`);
+    const hiddenInput = document.getElementById(`edit_is_onsite_${entryId}`);
+
+    if (isOnsite) {
+      onsiteBadge.className = "flex-1 py-1 text-xs font-bold rounded-md bg-blue-100 text-blue-700 shadow-sm";
+      remoteBadge.className = "flex-1 py-1 text-xs font-medium rounded-md text-gray-500 hover:text-gray-700";
+      hiddenInput.value = "true";
+    } else {
+      remoteBadge.className = "flex-1 py-1 text-xs font-bold rounded-md bg-cyan-100 text-cyan-700 shadow-sm";
+      onsiteBadge.className = "flex-1 py-1 text-xs font-medium rounded-md text-gray-500 hover:text-gray-700";
+      hiddenInput.value = "false";
+    }
+  }
+
+  // Check if selected date is weekend or holiday and toggle location controls
+  function checkDateAndToggleLocation() {
+    const dateSelect = document.getElementById("work_date");
+    if (!dateSelect) return;
+
+    const selectedDateValue = dateSelect.value;
+    const activeContainer = document.getElementById("location_toggle_container");
+    const disabledContainer = document.getElementById("location_toggle_disabled");
+    
+    if (!activeContainer || !disabledContainer) return;
+
+    // Find the date info from validDatesData
+    const dateInfo = validDatesData.find(d => d.formattedDate === selectedDateValue);
+    
+    // Check if date is weekend, public holiday, or user holiday
+    const isWeekendOrHoliday = dateInfo && (
+      dateInfo.isWeekend || 
+      dateInfo.isPublicHoliday || 
+      dateInfo.isUserHoliday
+    );
+
+    if (isWeekendOrHoliday) {
+      // Show disabled buttons for weekends/holidays
+      activeContainer.classList.add("hidden");
+      disabledContainer.classList.remove("hidden");
+    } else {
+      // Show active buttons for working days
+      activeContainer.classList.remove("hidden");
+      disabledContainer.classList.add("hidden");
+      
+      // Set initial location state based on database value
+      if (dateInfo && dateInfo.location !== null && dateInfo.location !== undefined) {
+        toggleLocation(dateInfo.location);
+      } else {
+        // Default to onsite if no location is set
+        toggleLocation(true);
+      }
+    }
+  }
+
+  // Add event listeners when DOM is ready
   document.addEventListener("DOMContentLoaded", function () {
+    // Hours input validation
     const hoursInput = document.getElementById("hours_input");
     if (hoursInput) {
       hoursInput.addEventListener("blur", validateHoursInput);
+      hoursInput.addEventListener("input", function (e) {
+        updateHoursValue(e.target.value);
+      });
+      hoursInput.addEventListener("click", function (e) {
+        e.target.select();
+      });
     }
-    
-    // Initialize month navigation
+
+    // Set hours buttons (8h, 9h, 10h, etc.)
+    document.querySelectorAll("[data-set-hours]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        const hours = this.getAttribute("data-set-hours");
+        setHours(hours);
+      });
+    });
+
+    // Increment/Decrement buttons
+    const incrementBtn = document.getElementById("increment_hours_btn");
+    const decrementBtn = document.getElementById("decrement_hours_btn");
+
+    if (incrementBtn) {
+      incrementBtn.addEventListener("click", incrementHours);
+    }
+
+    if (decrementBtn) {
+      decrementBtn.addEventListener("click", decrementHours);
+    }
+
+    // Toggle edit form buttons
+    document.querySelectorAll("[data-toggle-edit]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        const entryId = this.getAttribute("data-toggle-edit");
+        toggleEditForm(entryId);
+      });
+    });
+
+    // Delete entry form confirmation
+    document.querySelectorAll(".delete-entry-form").forEach(function (form) {
+      form.addEventListener("submit", function (e) {
+        if (!confirm("Czy na pewno chcesz usunąć ten wpis?")) {
+          e.preventDefault();
+        }
+      });
+    });
+
+    // Month navigation
+    const navigatePrevBtn = document.getElementById("navigatePrevMonth");
+    const navigateNextBtn = document.getElementById("navigateNextMonth");
+
+    if (navigatePrevBtn) {
+      navigatePrevBtn.addEventListener("click", function () {
+        navigateMonth(-1);
+      });
+    }
+
+    if (navigateNextBtn) {
+      navigateNextBtn.addEventListener("click", function () {
+        navigateMonth(1);
+      });
+    }
+
+    // Initialize month navigation display
     updateMonthDisplay();
+
+    // Initialize location toggle state based on selected date
+    checkDateAndToggleLocation();
+
+    // Add event listener for date selection change
+    const dateSelect = document.getElementById("work_date");
+    if (dateSelect) {
+      dateSelect.addEventListener("change", checkDateAndToggleLocation);
+    }
+
+    // Add event listeners for location toggle badges
+    const onsiteBadge = document.getElementById("badge_onsite");
+    const remoteBadge = document.getElementById("badge_remote");
+    if (onsiteBadge) {
+      onsiteBadge.addEventListener("click", function () {
+        toggleLocation(true);
+      });
+    }
+    if (remoteBadge) {
+      remoteBadge.addEventListener("click", function () {
+        toggleLocation(false);
+      });
+    }
+
+    // Note: Edit form location toggle badges are handled in toggleEditForm function
+    // since they are dynamically shown/hidden
   });
 
   // Month navigation functionality
-  const selectedMonth = parseInt(document.getElementById('monthNavigation').dataset.currentMonth);
-  const selectedYear = parseInt(document.getElementById('monthNavigation').dataset.currentYear);
+  const monthNavEl = document.getElementById("monthNavigation");
+  const selectedMonth = monthNavEl
+    ? parseInt(monthNavEl.dataset.currentMonth)
+    : new Date().getMonth() + 1;
+  const selectedYear = monthNavEl
+    ? parseInt(monthNavEl.dataset.currentYear)
+    : new Date().getFullYear();
   let displayMonth = selectedMonth;
   let displayYear = selectedYear;
-  
+
   function getMonthName(month, year) {
-    return new Date(year, month - 1, 1).toLocaleString('pl-PL', { month: 'short' });
+    return new Date(year, month - 1, 1).toLocaleString("pl-PL", {
+      month: "long",
+    });
   }
   
+  function getShortMonthName(month, year) {
+    return new Date(year, month - 1, 1).toLocaleString("pl-PL", {
+      month: "short",
+    });
+  }
+
+  function isFutureMonth(month, year) {
+    const today = new Date();
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
+    
+    if (year > currentYear) return true;
+    if (year === currentYear && month > currentMonth) return true;
+    return false;
+  }
+
   function updateMonthDisplay() {
     const prevMonth = displayMonth === 1 ? 12 : displayMonth - 1;
     const prevYear = displayMonth === 1 ? displayYear - 1 : displayYear;
     const nextMonth = displayMonth === 12 ? 1 : displayMonth + 1;
     const nextYear = displayMonth === 12 ? displayYear + 1 : displayYear;
-    
+
+    // Check if next month would be in the future
+    const isNextMonthFuture = isFutureMonth(nextMonth, nextYear);
+
     // Update button texts
-    document.getElementById('prevMonthBtn').textContent = getMonthName(prevMonth, prevYear) + ' ' + prevYear;
-    document.getElementById('currentMonthBtn').textContent = getMonthName(displayMonth, displayYear) + ' ' + displayYear;
-    document.getElementById('nextMonthBtn').textContent = getMonthName(nextMonth, nextYear) + ' ' + nextYear;
+    document.getElementById("prevMonthBtn").textContent = getShortMonthName(prevMonth, prevYear);
     
+    // Capitalize first letter of current month
+    const currentMonthName = getMonthName(displayMonth, displayYear);
+    const capitalizedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
+    document.getElementById("currentMonthBtn").textContent = capitalizedMonth + " " + displayYear;
+    
+    document.getElementById("nextMonthBtn").textContent = getShortMonthName(nextMonth, nextYear);
+
     // Update button links
-    document.getElementById('prevMonthBtn').href = `/work-hours?month=${prevMonth}&year=${prevYear}`;
-    document.getElementById('currentMonthBtn').href = `/work-hours?month=${displayMonth}&year=${displayYear}`;
-    document.getElementById('nextMonthBtn').href = `/work-hours?month=${nextMonth}&year=${nextYear}`;
+    document.getElementById(
+      "prevMonthBtn"
+    ).href = `/work-hours?month=${prevMonth}&year=${prevYear}`;
     
-    // Update styling - highlight whichever button represents the actually selected month
-    const prevBtn = document.getElementById('prevMonthBtn');
-    const currentBtn = document.getElementById('currentMonthBtn');
-    const nextBtn = document.getElementById('nextMonthBtn');
+    // Disable next month navigation if it would be in the future
+    const nextMonthBtn = document.getElementById("navigateNextMonth");
+    const nextMonthLink = document.getElementById("nextMonthBtn");
     
-    // Reset all buttons to default styling
-    const defaultClass = "px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md font-medium";
-    const middleDefaultClass = "px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md font-bold";
-    const selectedClass = "px-3 py-2 text-sm bg-blue-500 text-white rounded-md font-medium cursor-default";
-    const selectedMiddleClass = "px-3 py-2 text-sm bg-blue-500 text-white rounded-md font-bold cursor-default";
-    
-    // Check which button represents the selected month and highlight it
-    if (prevMonth === selectedMonth && prevYear === selectedYear) {
-      prevBtn.className = selectedClass;
-      prevBtn.removeAttribute('href');
-      currentBtn.className = middleDefaultClass;
-      nextBtn.className = defaultClass;
-    } else if (displayMonth === selectedMonth && displayYear === selectedYear) {
-      prevBtn.className = defaultClass;
-      currentBtn.className = selectedMiddleClass;
-      currentBtn.removeAttribute('href');
-      nextBtn.className = defaultClass;
-    } else if (nextMonth === selectedMonth && nextYear === selectedYear) {
-      prevBtn.className = defaultClass;
-      currentBtn.className = middleDefaultClass;
-      nextBtn.className = selectedClass;
-      nextBtn.removeAttribute('href');
+    if (isNextMonthFuture) {
+      if (nextMonthBtn) {
+        nextMonthBtn.disabled = true;
+        nextMonthBtn.classList.add("opacity-50", "cursor-not-allowed");
+        nextMonthBtn.classList.remove("hover:bg-white", "hover:shadow-sm");
+      }
+      if (nextMonthLink) {
+        nextMonthLink.href = "#";
+        nextMonthLink.classList.add("opacity-50", "cursor-not-allowed");
+        nextMonthLink.classList.remove("hover:text-gray-600");
+      }
     } else {
-      // None of the visible buttons represent the selected month
-      prevBtn.className = defaultClass;
-      currentBtn.className = middleDefaultClass;
-      nextBtn.className = defaultClass;
+      if (nextMonthBtn) {
+        nextMonthBtn.disabled = false;
+        nextMonthBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        nextMonthBtn.classList.add("hover:bg-white", "hover:shadow-sm");
+      }
+      if (nextMonthLink) {
+        nextMonthLink.href = `/work-hours?month=${nextMonth}&year=${nextYear}`;
+        nextMonthLink.classList.remove("opacity-50", "cursor-not-allowed");
+        nextMonthLink.classList.add("hover:text-gray-600");
+      }
     }
   }
-  
+
   function navigateMonth(direction) {
     if (direction === -1) {
       if (displayMonth === 1) {
@@ -550,6 +808,14 @@
         displayMonth--;
       }
     } else {
+      // Prevent navigation to future months
+      const nextMonth = displayMonth === 12 ? 1 : displayMonth + 1;
+      const nextYear = displayMonth === 12 ? displayYear + 1 : displayYear;
+      
+      if (isFutureMonth(nextMonth, nextYear)) {
+        return; // Don't navigate to future months
+      }
+      
       if (displayMonth === 12) {
         displayMonth = 1;
         displayYear++;
@@ -557,6 +823,29 @@
         displayMonth++;
       }
     }
-    updateMonthDisplay();
+    // Navigate
+    window.location.href = `/work-hours?month=${displayMonth}&year=${displayYear}`;
   }
 </script>
+
+<style>
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.4s ease-out forwards;
+  }
+  
+  /* Hide number input spinners */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+</style>

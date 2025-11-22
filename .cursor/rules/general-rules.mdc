@@ -20,7 +20,10 @@ alwaysApply: true
 - Clean and simple look
 - Use Tailwind CSS for styling
 
-## Ignore specific errors
+## Linting
 
-- Ignore error regarding this line: style="<%= progressStyle %>"
-- Ignore error in holidays/index.ejs regarding style attribute formatting (Line 74: } expected)
+- ESLint is configured for `.js` files and `<script>` tags in `.ejs` files
+- Run `npm run lint` to check all files, `npm run lint:fix` to auto-fix issues
+- Files with EJS template syntax inside JavaScript code (like `<% users.forEach %>` in arrays) cannot be parsed by ESLint and must be added to the `ignores` array in `eslint.config.js`
+- Currently ignored EJS files: `views/admin/groups.ejs`, `views/admin/statistics.ejs`, `views/work-hours/index.ejs`
+- If you get "Parsing error: Unexpected token <" in an EJS file, add it to the ignores list

@@ -9,6 +9,7 @@ const router = express.Router();
 const Group = require("../models/Group");
 const User = require("../models/User");
 const { formatDateTimeForDisplay } = require("../utils/dateUtils");
+const { prepareMessages } = require("../utils/messageUtils");
 
 // Get all groups (Admin only)
 router.get("/", async (req, res) => {
@@ -25,11 +26,7 @@ router.get("/", async (req, res) => {
       groups: groups,
       users: users,
       formatDateTimeForDisplay,
-      messages: req.query.message
-        ? { success: req.query.message }
-        : req.query.error
-        ? { error: req.query.error }
-        : {},
+      messages: prepareMessages(req.query),
     });
   } catch (error) {
     console.error("Error loading groups:", error);
@@ -47,7 +44,7 @@ router.post("/", async (req, res) => {
     }
 
     await Group.create({ name: name.trim() });
-    res.redirect("/admin/groups?message=group_created");
+    res.redirect("/admin/groups?success=group_created");
   } catch (error) {
     console.error("Error creating group:", error);
     res.status(500).send("Nie udało się utworzyć grupy");
@@ -76,7 +73,7 @@ router.post("/assign-user", async (req, res) => {
     }
 
     await user.update({ group_id });
-    res.redirect("/admin/groups?message=user_assigned");
+    res.redirect("/admin/groups?success=user_assigned");
   } catch (error) {
     console.error("Error assigning user to group:", error);
     res.status(500).send("Nie udało się przypisać użytkownika do grupy");
@@ -99,7 +96,7 @@ router.post("/:id", async (req, res) => {
     }
 
     await group.update({ name: name.trim() });
-    res.redirect("/admin/groups?message=group_updated");
+    res.redirect("/admin/groups?success=group_updated");
   } catch (error) {
     console.error("Error updating group:", error);
     res.status(500).send("Nie udało się zaktualizować grupy");
@@ -117,14 +114,12 @@ router.post("/:id/delete", async (req, res) => {
     }
 
     await group.delete();
-    res.redirect("/admin/groups?message=group_deleted");
+    res.redirect("/admin/groups?success=group_deleted");
   } catch (error) {
     console.error("Error deleting group:", error);
 
     if (error.message === "Cannot delete group with assigned users") {
-      return res.redirect(
-        "/admin/groups?error=Cannot delete group with assigned users"
-      );
+      return res.redirect("/admin/groups?error=group_has_users");
     }
 
     res.status(500).send("Nie udało się usunąć grupy");

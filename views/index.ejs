@@ -1,158 +1,586 @@
-<%- layout('layouts/main') %> <% if (typeof isAuthenticated !== 'undefined' &&
-isAuthenticated) { %>
-<div class="bg-white rounded-lg shadow p-6">
-  <div class="text-center mb-8">
-    <h2 class="text-3xl font-bold text-gray-900">System Ewidencji Czasu</h2>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div
-      class="bg-blue-50 rounded-lg p-6 shadow-sm border border-blue-100 transition-all hover:shadow-md">
-      <div class="flex items-start">
-        <div class="p-3 rounded-full bg-blue-100 mr-4">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-8 w-8 text-blue-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        <div>
-          <h3 class="text-lg font-medium text-blue-800">Twój czas pracy</h3>
-          <p class="mt-2 text-sm text-blue-700">
-            Rejestruj swój czas pracy, przeglądaj historię i statystyki. Sprawdź
-            ile godzin przepracowałeś.
-          </p>
-          <div class="mt-4">
-            <a
-              href="/work-hours"
-              class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-              Przejdź do ewidencji
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="ml-2 h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div
-      class="bg-green-50 rounded-lg p-6 shadow-sm border border-green-100 transition-all hover:shadow-md">
-      <div class="flex items-start">
-        <div class="p-3 rounded-full bg-green-100 mr-4">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-8 w-8 text-green-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-        </div>
-        <div>
-          <h3 class="text-lg font-medium text-green-800">Urlopy</h3>
-          <p class="mt-2 text-sm text-green-700">
-            Zarządzaj swoimi urlopami. Planuj przyszłe dni wolne i przeglądaj
-            historię swoich urlopów.
-          </p>
-          <div class="mt-4">
-            <a
-              href="/holidays"
-              class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-500 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-              Zarządzaj urlopami
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="ml-2 h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="mt-8">
-    <div class="mb-8 bg-gray-50 rounded-lg p-4">
-      <% if (typeof monthStats !== 'undefined') { %> <%-
-      include('partials/_monthly_summary', {summaryData: monthStats,
-      showHolidayLink: false }) %> <% } else { %>
-      <p class="text-gray-700 mb-4">
-        Zaloguj się i zarejestruj czas pracy, aby zobaczyć podsumowanie
-        miesiąca.
+<%- layout('layouts/main') %> 
+<% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
+<div class="max-w-7xl mx-auto">
+  <!-- Header Section -->
+  <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 tracking-tight">
+        Cześć, <%= (typeof dbUser !== 'undefined' && dbUser && dbUser.name) ? dbUser.name : (user && user.email ? user.email.split('@')[0] : 'Użytkowniku') %>! 👋
+      </h1>
+      <p class="mt-1 text-base text-gray-600">
+        Miłego dnia w pracy.
       </p>
-      <% } %>
+    </div>
+    <div class="hidden md:block text-right">
+      <div class="text-xs font-medium text-gray-500 uppercase tracking-wider">Dzisiaj jest</div>
+      <div class="text-lg font-bold text-gray-900 capitalize">
+        <%= new Date().toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' }) %>
+      </div>
     </div>
   </div>
-  <% } else { %>
-  <div
-    class="text-center py-10 bg-gradient-to-b from-blue-50 to-white rounded-lg shadow-sm max-w-lg mx-auto">
-    <div
-      class="mx-auto w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-6">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-12 w-12 text-blue-500"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Left Column: Today's Status -->
+    <div class="lg:col-span-1">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 h-full flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+            <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Twój status dzisiaj
+          </h2>
+          <span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+            <%= todayIso || new Date().toISOString().split('T')[0] %>
+          </span>
+        </div>
+
+        <div class="flex-1 flex flex-col justify-center items-center mb-4">
+          <div id="today-status-icon" class="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-3 transition-colors duration-300">
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="text-center">
+            <div class="text-xs text-gray-500 font-medium mb-1">Aktualnie pracujesz</div>
+            <div id="today_status_badge" class="text-xl font-bold text-gray-800">Brak wyboru</div>
+          </div>
+        </div>
+
+        <% if (isTodayRestricted || ((typeof showTodayLocationSection === 'undefined' || showTodayLocationSection) && todayLocation !== false)) { %>
+        <% if (isTodayRestricted) { %>
+        <div class="mt-auto">
+          <div class="flex items-center justify-center gap-2 mb-2 text-amber-600">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016zM12 9v2m0 4h.01" />
+            </svg>
+            <span class="text-xs font-medium">
+              Nie możesz wybrać lokacji w <%= todayRestrictionReason === 'święto' ? 'święto' : todayRestrictionReason === 'urlop' ? 'trakcie urlopu' : todayRestrictionReason === 'weekend' ? 'weekend' : 'ten dzień' %>
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              data-today-action="remote"
+              disabled
+              class="flex flex-col items-center justify-center p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-60">
+              <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <span class="text-xs font-bold">Zdalnie</span>
+            </button>
+            <button
+              type="button"
+              data-today-action="onsite"
+              disabled
+              class="flex flex-col items-center justify-center p-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-60">
+              <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              <span class="text-xs font-bold">Biuro</span>
+            </button>
+          </div>
+        </div>
+        <% } else { %>
+        <div class="grid grid-cols-2 gap-2 mt-auto">
+          <button
+            type="button"
+            data-today-action="remote"
+            class="flex flex-col items-center justify-center p-2 rounded-lg border border-transparent bg-cyan-50 text-cyan-700 hover:bg-cyan-100 hover:border-cyan-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-1 group">
+            <svg class="w-5 h-5 mb-1 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span class="text-xs font-bold">Zdalnie</span>
+          </button>
+          <button
+            type="button"
+            data-today-action="onsite"
+            class="flex flex-col items-center justify-center p-2 rounded-lg border border-transparent bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 group">
+            <svg class="w-5 h-5 mb-1 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            <span class="text-xs font-bold">Biuro</span>
+          </button>
+        </div>
+        <% } %>
+        <% } %>
+      </div>
     </div>
-    <h3 class="text-2xl font-bold text-gray-900 mb-4">
-      Witaj w Systemie Ewidencji Czasu Pracy
-    </h3>
-    <p class="text-gray-600 mb-8 px-6">
-      Zaloguj się, aby uzyskać dostęp do funkcji systemu, rejestrować czas pracy
-      i zarządzać urlopami.
-    </p>
-    <a
-      href="/login"
-      class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-5 w-5 mr-2"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-      </svg>
-      Zaloguj się
-    </a>
+
+    <!-- Right Column: Quick Links -->
+    <div class="lg:col-span-2 flex flex-col gap-4">
+      <!-- Work Hours Card -->
+      <a href="/work-hours" class="group relative flex-1 bg-white rounded-xl shadow-sm border border-gray-100 p-5 overflow-hidden hover:shadow-md transition-all duration-300">
+        <div class="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-blue-50 to-transparent rounded-bl-full -mr-12 -mt-12 transition-transform duration-500 group-hover:scale-110 opacity-50"></div>
+        
+        <div class="relative z-10 flex items-start justify-between">
+          <div>
+            <div class="flex items-center gap-4 mb-3">
+              <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300 shadow-sm">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">Ewidencja Czasu</h3>
+            </div>
+            <p class="text-gray-600 text-sm max-w-md mb-4">
+              Rejestruj czas pracy, przeglądaj historię i sprawdzaj statystyki.
+            </p>
+            <div class="inline-flex items-center text-sm font-semibold text-blue-600 group-hover:translate-x-2 transition-transform">
+              Przejdź do ewidencji
+              <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <!-- Holidays Card -->
+      <a href="/holidays" class="group relative flex-1 bg-white rounded-xl shadow-sm border border-gray-100 p-5 overflow-hidden hover:shadow-md transition-all duration-300">
+        <div class="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-green-50 to-transparent rounded-bl-full -mr-12 -mt-12 transition-transform duration-500 group-hover:scale-110 opacity-50"></div>
+        
+        <div class="relative z-10 flex items-start justify-between">
+          <div>
+            <div class="flex items-center gap-4 mb-3">
+              <div class="w-10 h-10 bg-green-100 text-green-600 rounded-lg flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition-colors duration-300 shadow-sm">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-bold text-gray-900 group-hover:text-green-600 transition-colors">Urlopy</h3>
+            </div>
+            <p class="text-gray-600 text-sm max-w-md mb-4">
+              Planuj wypoczynek i sprawdzaj limity (wkrótce).
+            </p>
+            <div class="inline-flex items-center text-sm font-semibold text-green-600 group-hover:translate-x-2 transition-transform">
+              Zarządzaj urlopami
+              <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
   </div>
+
+  <!-- Monthly Summary -->
+  <% if (typeof monthStats !== 'undefined' && monthStats) { %>
+    <div class="mb-8">
+      <%- include('partials/_monthly_summary', {summaryData: monthStats, showHolidayLink: true }) %>
+    </div>
   <% } %>
+
+  <!-- Calendar Section -->
+  <div class="bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden mb-8" id="location_planner">
+    <% if (workLocationCalendars && workLocationCalendars.length) { 
+      const defaultTabIndex = workLocationCalendars.findIndex(c => c.month === currentMonthNumber && c.year === currentYearNumber);
+      const activeTab = defaultTabIndex >= 0 ? defaultTabIndex : Math.min(1, workLocationCalendars.length - 1);
+    %>
+    <div class="p-4 border-b border-gray-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+      <div>
+        <h3 class="text-lg font-bold text-gray-900">Planer pracy zdalnej</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Kliknij w dzień, aby przełączyć między pracą w biurze a zdalną.</p>
+      </div>
+      
+      <div class="flex overflow-x-auto pb-2 lg:pb-0 hide-scrollbar gap-1.5" id="location_tabs">
+        <% workLocationCalendars.forEach((cal, idx) => { 
+          const isActive = idx === activeTab;
+        %>
+        <button
+          type="button"
+          data-location-tab="<%= idx %>"
+          class="<%= isActive
+            ? 'px-3 py-1.5 rounded-md text-xs font-bold bg-blue-500 text-white shadow-sm'
+            : 'px-3 py-1.5 rounded-md text-xs font-medium bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900' %> transition-all whitespace-nowrap">
+          <%= cal.monthName %> <%= cal.year %>
+        </button>
+        <% }) %>
+      </div>
+    </div>
+
+    <div class="p-4 bg-white">
+      <% workLocationCalendars.forEach((cal, idx) => { 
+        const isActive = idx === activeTab;
+      %>
+      <div
+        class="<%= isActive ? 'animate-fade-in' : 'hidden' %> location-panel"
+        data-location-panel="<%= idx %>">
+        
+        <!-- Weekday Headers -->
+        <div class="grid grid-cols-7 mb-1">
+          <% ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb', 'Nd'].forEach(day => { %>
+            <div class="text-center text-[10px] font-bold text-gray-400 uppercase tracking-wider py-1"><%= day %></div>
+          <% }) %>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div class="grid grid-cols-7 gap-1.5 lg:gap-2">
+          <% 
+            const firstDay = new Date(cal.year, cal.month - 1, 1);
+            const leadingEmpty = (firstDay.getDay() + 6) % 7;
+            for (let i = 0; i < leadingEmpty; i++) { %>
+            <div class="h-16 lg:h-20 rounded-lg bg-gray-50/50 border border-transparent"></div>
+          <% } %>
+          
+          <% cal.days.forEach(day => { 
+            const state = day.is_onsite === null ? 'unset' : day.is_onsite ? 'onsite' : 'remote';
+            const stateLabel = state === 'onsite' ? 'Stacjonarnie' : state === 'remote' ? 'Zdalnie' : 'Brak wyboru';
+            const disabled = day.isHoliday || day.isPublicHoliday || day.isWeekend;
+            
+            // Styling logic
+            let baseClass = 'location-cell group relative flex flex-col items-start justify-between p-2 h-16 lg:h-20 rounded-lg border transition-all duration-200';
+            let stateClass = '';
+            
+            if (state === 'onsite') {
+              stateClass = 'bg-blue-50 border-blue-200 text-blue-900 hover:border-blue-300 hover:shadow-sm';
+            } else if (state === 'remote') {
+              stateClass = 'bg-cyan-50 border-cyan-200 text-cyan-900 hover:border-cyan-300 hover:shadow-sm';
+            } else {
+              stateClass = 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:shadow-sm';
+            }
+
+            if (disabled) {
+              stateClass = 'bg-gray-50 border-gray-100 text-gray-400 opacity-70 cursor-not-allowed';
+            }
+          %>
+          <button
+            type="button"
+            class="<%= baseClass %> <%= stateClass %>"
+            data-work-date="<%= day.date %>"
+            data-state="<%= state %>"
+            data-disabled="<%= disabled ? 'true' : 'false' %>"
+            <%= disabled ? 'disabled' : '' %>>
+            
+            <div class="w-full flex items-center justify-between">
+              <span class="text-sm font-bold <%= disabled ? 'text-gray-400' : 'text-gray-700' %>"><%= day.day %></span>
+              <% if (day.isHoliday) { %>
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500" title="Urlop"></div>
+              <% } else if (day.isPublicHoliday) { %>
+                <div class="w-1.5 h-1.5 rounded-full bg-purple-500" title="Święto"></div>
+              <% } else if (day.isWeekend) { %>
+                <!-- No indicator for weekend -->
+              <% } %>
+            </div>
+
+            <div class="mt-auto w-full text-left">
+               <% if (day.isHoliday) { %>
+                <span class="inline-flex items-center px-1 py-0.5 rounded-[4px] text-[10px] font-medium bg-green-100 text-green-800 w-full justify-center leading-tight">
+                   Urlop
+                </span>
+              <% } else if (day.isPublicHoliday) { %>
+                <span class="inline-flex items-center px-1 py-0.5 rounded-[4px] text-[10px] font-medium bg-purple-100 text-purple-800 w-full justify-center leading-tight">
+                  Święto
+                </span>
+               <% } else if (day.isWeekend) { %>
+                <span class="text-[10px] text-gray-400 font-medium block text-center w-full">Weekend</span>
+              <% } else { %>
+                <div class="status-label text-[10px] font-semibold px-1 py-0.5 rounded-[4px] w-full text-center transition-colors leading-tight
+                  <%= state === 'onsite' ? 'bg-blue-100 text-blue-700' : state === 'remote' ? 'bg-cyan-100 text-cyan-700' : 'bg-gray-100 text-gray-500' %>">
+                  <%= stateLabel %>
+                </div>
+              <% } %>
+            </div>
+          </button>
+          <% }); %>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+    <% } else { %>
+    <div class="p-8 text-center">
+      <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      <p class="mt-2 text-sm text-gray-500">Nie udało się załadować danych kalendarza.</p>
+    </div>
+    <% } %>
+  </div>
 </div>
+
+<% } else { %>
+<!-- Login Screen / Landing -->
+<div class="min-h-[70vh] flex items-center justify-center">
+  <div class="max-w-md w-full space-y-6">
+    <% if (typeof messages !== 'undefined' && messages && messages.error && messages.error.includes('zablokowane')) { %>
+    <!-- Blocked Account Warning -->
+    <div class="bg-red-50 border-2 border-red-200 rounded-xl shadow-lg p-6">
+      <div class="flex items-start">
+        <div class="flex-shrink-0">
+          <svg class="h-10 w-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+        </div>
+        <div class="ml-4">
+          <h3 class="text-lg font-bold text-red-800 mb-2">Konto Zablokowane</h3>
+          <p class="text-sm text-red-700 leading-relaxed">
+            <%= messages.error %>
+          </p>
+        </div>
+      </div>
+    </div>
+    <% } %>
+    
+    <!-- Login Card -->
+    <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
+    <div class="mx-auto w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mb-6 shadow-md transform rotate-3">
+      <svg class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+    <h2 class="text-2xl font-bold text-gray-900 mb-2">Witaj w systemie</h2>
+    <p class="text-gray-600 text-sm mb-6 leading-relaxed">
+      Zaloguj się, aby uzyskać dostęp do ewidencji czasu pracy.
+    </p>
+    <a href="/login" class="inline-flex items-center justify-center w-full px-4 py-3 border border-transparent text-base font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all shadow hover:shadow-md transform hover:-translate-y-0.5">
+      <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+      </svg>
+      Zaloguj się bezpiecznie
+    </a>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<% if (isAuthenticated) { %>
+<script>
+  (function () {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    const todayDate = "<%= todayIso || '' %>";
+    const todayBadge = document.getElementById("today_status_badge");
+    const todayIconContainer = document.getElementById("today-status-icon");
+
+    const icons = {
+      remote: '<svg class="w-8 h-8 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>',
+      onsite: '<svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>',
+      unset: '<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'
+    };
+
+    // CSS Classes configurations
+    const stateClassMap = {
+      onsite: ["bg-blue-50", "border-blue-200", "text-blue-900", "hover:border-blue-300", "hover:shadow-sm"],
+      remote: ["bg-cyan-50", "border-cyan-200", "text-cyan-900", "hover:border-cyan-300", "hover:shadow-sm"],
+      unset: ["bg-white", "border-gray-200", "text-gray-700", "hover:border-gray-300", "hover:shadow-sm"],
+    };
+    
+    // Helper to remove all possible state classes
+    const allStateClasses = [
+      ...stateClassMap.onsite,
+      ...stateClassMap.remote,
+      ...stateClassMap.unset,
+    ];
+
+    function updateTodayBadge(state) {
+      if (!todayBadge || !todayIconContainer) return;
+      const labelMap = {
+        onsite: "Stacjonarnie",
+        remote: "Zdalnie",
+        unset: "Brak wyboru",
+      };
+      
+      todayBadge.textContent = labelMap[state] || labelMap.unset;
+      
+      // Update Icon and colors
+      if (state === "onsite") {
+        todayIconContainer.innerHTML = icons.onsite;
+        todayIconContainer.className = "w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-3 transition-colors duration-300";
+        todayBadge.className = "text-xl font-bold text-blue-700";
+      } else if (state === "remote") {
+        todayIconContainer.innerHTML = icons.remote;
+        todayIconContainer.className = "w-16 h-16 rounded-full bg-cyan-100 flex items-center justify-center mb-3 transition-colors duration-300";
+        todayBadge.className = "text-xl font-bold text-cyan-700";
+      } else {
+        todayIconContainer.innerHTML = icons.unset;
+        todayIconContainer.className = "w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-3 transition-colors duration-300";
+        todayBadge.className = "text-xl font-bold text-gray-800";
+      }
+    }
+
+    function applyStateToCell(cell, state) {
+      const normalizedState = (state === "onsite" || state === "remote") ? state : "unset";
+      
+      // Update data attribute
+      cell.dataset.state = normalizedState;
+      
+      // Update classes
+      allStateClasses.forEach((cls) => cell.classList.remove(cls));
+      stateClassMap[normalizedState].forEach((cls) => cell.classList.add(cls));
+      
+      // Update inner label
+      const statusLabel = cell.querySelector(".status-label");
+      if (statusLabel) {
+        statusLabel.textContent = normalizedState === "onsite" ? "Stacjonarnie" : normalizedState === "remote" ? "Zdalnie" : "Brak wyboru";
+        
+        // Update label styles
+        statusLabel.className = `status-label text-[10px] font-semibold px-1 py-0.5 rounded-[4px] w-full text-center transition-colors leading-tight ${
+          normalizedState === 'onsite' ? 'bg-blue-100 text-blue-700' : 
+          normalizedState === 'remote' ? 'bg-cyan-100 text-cyan-700' : 
+          'bg-gray-100 text-gray-500'
+        }`;
+      }
+    }
+
+    function applyStateEverywhere(date, state) {
+      // Update all cells with matching date
+      document
+        .querySelectorAll(`[data-work-date="${date}"]`)
+        .forEach((cell) => applyStateToCell(cell, state));
+        
+      // Update Today Badge if applicable
+      if (date === todayDate) {
+        updateTodayBadge(state);
+      }
+    }
+
+    async function saveLocation(date, isOnsite) {
+      const response = await fetch("/work-locations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "CSRF-Token": csrfToken,
+        },
+        body: JSON.stringify({ work_date: date, is_onsite: isOnsite }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Nie udało się zapisać trybu pracy.");
+      }
+      return response.json();
+    }
+
+    async function clearLocation(date) {
+      const response = await fetch("/work-locations", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "CSRF-Token": csrfToken,
+        },
+        body: JSON.stringify({ work_date: date }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Nie udało się wyczyścić trybu pracy.");
+      }
+      return response.json();
+    }
+
+    function cycleState(current) {
+      if (current === "unset") return "remote";
+      if (current === "remote") return "onsite";
+      return "unset";
+    }
+
+    // Calendar Cell Interactions
+    document.querySelectorAll(".location-cell").forEach((cell) => {
+      cell.addEventListener("click", async () => {
+        if (cell.dataset.disabled === "true") return;
+        
+        const date = cell.dataset.workDate;
+        const current = cell.dataset.state || "unset";
+        const next = cycleState(current);
+
+        try {
+          // Optimistic update
+          applyStateEverywhere(date, next);
+          
+          if (next === "unset") {
+            await clearLocation(date);
+          } else {
+            await saveLocation(date, next === "onsite");
+          }
+        } catch (error) {
+          console.error(error);
+          // Revert on error
+          applyStateEverywhere(date, current);
+          alert(error.message);
+        }
+      });
+    });
+
+    // Tabs Handling
+    const tabButtons = document.querySelectorAll("[data-location-tab]");
+    const panels = document.querySelectorAll("[data-location-panel]");
+    
+    tabButtons.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const target = tab.getAttribute("data-location-tab");
+        
+        // Reset all tabs
+        tabButtons.forEach((btn) => {
+          btn.className = "px-3 py-1.5 rounded-md text-xs font-medium bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all whitespace-nowrap";
+        });
+        
+        // Activate clicked tab
+        tab.className = "px-3 py-1.5 rounded-md text-xs font-bold bg-blue-500 text-white shadow-sm transition-all whitespace-nowrap";
+
+        // Show target panel
+        panels.forEach((panel) => {
+          if (panel.getAttribute("data-location-panel") === target) {
+            panel.classList.remove("hidden");
+            panel.classList.add("animate-fade-in");
+          } else {
+            panel.classList.add("hidden");
+            panel.classList.remove("animate-fade-in");
+          }
+        });
+      });
+    });
+
+    // Today Quick Actions
+    document.querySelectorAll("[data-today-action]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        // Check if button is disabled
+        if (btn.disabled || btn.hasAttribute('disabled')) {
+          return;
+        }
+        
+        const action = btn.getAttribute("data-today-action");
+        if (!todayDate) return;
+        
+        try {
+          const isOnsite = action === "onsite";
+          // Determine current state to see if we are toggling off?
+          // For these buttons, we assume they enforce the state.
+          
+          // Optimistic UI update
+          applyStateEverywhere(todayDate, isOnsite ? "onsite" : "remote");
+          
+          await saveLocation(todayDate, isOnsite);
+          
+          // We don't hide buttons anymore, as user might want to switch
+        } catch (error) {
+          console.error(error);
+          alert(error.message);
+          // We should probably revert here if we knew previous state, but simpler to just alert for now
+        }
+      });
+    });
+    
+    // Initialize Today Badge on load
+    const todayCell = document.querySelector(`[data-work-date="${todayDate}"]`);
+    if (todayCell) {
+        updateTodayBadge(todayCell.dataset.state || "unset");
+    }
+    
+  })();
+</script>
+
+<style>
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+</style>
+<% } %>

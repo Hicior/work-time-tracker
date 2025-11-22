@@ -41,6 +41,7 @@ docs/
 scripts/
 *.xlsx
 !README.md
+!env.example.txt
 
 ## Tailwind CSS
 public/css/output.css
