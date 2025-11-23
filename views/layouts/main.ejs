@@ -7,7 +7,7 @@
       <%- typeof title !== 'undefined' ? title + ' - ' : '' %>System Ewidencji Czasu
     </title>
     <link rel="icon" href="/images/icons8-time-16.png" />
-    <link rel="stylesheet" href="/css/output.css" />
+    <link rel="stylesheet" href="<%= versionedAsset('/css/output.css') %>" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -65,7 +65,7 @@
             <!-- Logo -->
             <div class="flex-shrink-0 flex items-center">
               <img
-                src="/images/logo_2000x2000px_poziom.png"
+                src="<%= versionedAsset('/images/logo_2000x2000px_poziom.png') %>"
                 alt="Kancelaria Mentzen"
                 class="h-8 w-auto transition-transform duration-200 hover:scale-105"
                 style="image-rendering: crisp-edges" />

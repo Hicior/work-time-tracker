@@ -100,7 +100,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 // Parse signed cookies for CSRF double-submit cookie pattern
 app.use(cookieParser(process.env.CSRF_COOKIE_SECRET));
-app.use(express.static(path.join(__dirname, "public")));
+
+// Serve static files with caching headers
+app.use(express.static(path.join(__dirname, "public"), {
+  maxAge: '7d', // 7 days for all static assets
+  setHeaders: (res, filePath) => {
+    // Add immutable for versioned assets (with query strings)
+    if (filePath.includes('?v=')) {
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    }
+  }
+}));
 
 // auth router attaches /login, /logout, and /callback routes to the baseURL
 // Must come AFTER cookie-parser to properly handle session cookies
@@ -110,6 +120,10 @@ app.use(auth(config));
 app.engine("ejs", ejsMate);
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
+
+// Make asset versioning helper available to all views
+const { versionedAsset } = require('./utils/assetVersion');
+app.locals.versionedAsset = versionedAsset;
 
 // Import routes
 const workHoursRoutes = require("./routes/work-hours");
