@@ -18,17 +18,19 @@ const isWithinAllowedWindow = (dateStr) => {
   const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
   const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
   const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+  const nextMonth2 = nextMonth === 12 ? 1 : nextMonth + 1;
+  const nextYear2 = nextMonth === 12 ? nextYear + 1 : nextYear;
 
   const { startDate: prevStart } = getMonthDateRange(prevYear, prevMonth);
-  const { endDate: nextEnd } = getMonthDateRange(nextYear, nextMonth);
+  const { endDate: next2End } = getMonthDateRange(nextYear2, nextMonth2);
 
   const start = new Date(prevStart);
-  const end = new Date(nextEnd);
+  const end = new Date(next2End);
 
   return target >= start && target <= end;
 };
 
-// Upsert work location for a specific date (previous, current or next month)
+// Upsert work location for a specific date (previous, current or next 2 months)
 router.post("/", async (req, res) => {
   try {
     const userId = req.user.id;
@@ -49,7 +51,7 @@ router.post("/", async (req, res) => {
     if (!allowed) {
       return res
         .status(400)
-        .json({ error: "Date must be in previous, current or next month" });
+        .json({ error: "Date must be within allowed range (previous month to 2 months ahead)" });
     }
 
     // Keep legacy behavior: weekends and holidays default to remote
@@ -99,7 +101,7 @@ router.delete("/", async (req, res) => {
     if (!allowed) {
       return res
         .status(400)
-        .json({ error: "Date must be in previous, current or next month" });
+        .json({ error: "Date must be within allowed range (previous month to 2 months ahead)" });
     }
 
     const removed = await WorkLocation.deleteByUserAndDate(
