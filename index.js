@@ -292,11 +292,13 @@ app.get("/", async (req, res) => {
         remainingHours: Math.round(remainingHours * 100) / 100,
       };
 
-      // Prepare work location planning for previous, current and next month
+      // Prepare work location planning for previous, current and next 2 months
       const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
       const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
       const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
       const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+      const nextMonth2 = nextMonth === 12 ? 1 : nextMonth + 1;
+      const nextYear2 = nextMonth === 12 ? nextYear + 1 : nextYear;
 
       const { startDate: prevStart, endDate: prevEnd } = getMonthDateRange(
         prevYear,
@@ -310,9 +312,13 @@ app.get("/", async (req, res) => {
         nextYear,
         nextMonth
       );
+      const { startDate: next2Start, endDate: next2End } = getMonthDateRange(
+        nextYear2,
+        nextMonth2
+      );
 
       const locationWindowStart = prevStart;
-      const locationWindowEnd = nextEnd;
+      const locationWindowEnd = next2End;
       locationWindow = { start: locationWindowStart, end: locationWindowEnd };
 
       const monthNames = [
@@ -331,7 +337,7 @@ app.get("/", async (req, res) => {
         "Grudzień",
       ];
 
-      const [locationEntries, holidayEntries, prevPublicHolidays, nextPublicHolidays] =
+      const [locationEntries, holidayEntries, prevPublicHolidays, nextPublicHolidays, next2PublicHolidays] =
         await Promise.all([
           WorkLocation.findByUserAndDateRange(
             dbUser.id,
@@ -345,12 +351,14 @@ app.get("/", async (req, res) => {
           ),
           PublicHoliday.findByMonthAndYear(prevMonth, prevYear),
           PublicHoliday.findByMonthAndYear(nextMonth, nextYear),
+          PublicHoliday.findByMonthAndYear(nextMonth2, nextYear2),
         ]);
 
       const allPublicHolidaysForWindow = [
         ...prevPublicHolidays,
         ...publicHolidays,
         ...nextPublicHolidays,
+        ...next2PublicHolidays,
       ];
 
       const locationMap = {};
@@ -403,6 +411,7 @@ app.get("/", async (req, res) => {
         buildLocationCalendar(prevMonth, prevYear),
         buildLocationCalendar(currentMonth, currentYear),
         buildLocationCalendar(nextMonth, nextYear),
+        buildLocationCalendar(nextMonth2, nextYear2),
       ];
 
       todayLocation = locationMap[formatDate(today)] ?? null;
