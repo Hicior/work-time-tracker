@@ -28,8 +28,7 @@ router.get("/", async (req, res) => {
       formatDateTimeForDisplay,
       messages: prepareMessages(req.query),
     });
-  } catch (error) {
-    console.error("Error loading groups:", error);
+  } catch (_error) {
     res.status(500).send("Nie udało się załadować grup");
   }
 });
@@ -45,8 +44,7 @@ router.post("/", async (req, res) => {
 
     await Group.create({ name: name.trim() });
     res.redirect("/admin/groups?success=group_created");
-  } catch (error) {
-    console.error("Error creating group:", error);
+  } catch (_error) {
     res.status(500).send("Nie udało się utworzyć grupy");
   }
 });
@@ -74,8 +72,7 @@ router.post("/assign-user", async (req, res) => {
 
     await user.update({ group_id });
     res.redirect("/admin/groups?success=user_assigned");
-  } catch (error) {
-    console.error("Error assigning user to group:", error);
+  } catch (_error) {
     res.status(500).send("Nie udało się przypisać użytkownika do grupy");
   }
 });
@@ -97,8 +94,7 @@ router.post("/:id", async (req, res) => {
 
     await group.update({ name: name.trim() });
     res.redirect("/admin/groups?success=group_updated");
-  } catch (error) {
-    console.error("Error updating group:", error);
+  } catch (_error) {
     res.status(500).send("Nie udało się zaktualizować grupy");
   }
 });
@@ -116,8 +112,6 @@ router.post("/:id/delete", async (req, res) => {
     await group.delete();
     res.redirect("/admin/groups?success=group_deleted");
   } catch (error) {
-    console.error("Error deleting group:", error);
-
     if (error.message === "Cannot delete group with assigned users") {
       return res.redirect("/admin/groups?error=group_has_users");
     }

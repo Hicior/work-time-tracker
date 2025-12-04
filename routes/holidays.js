@@ -49,27 +49,6 @@ const generateDateRange = (startDate, endDate, publicHolidays = []) => {
   return dates;
 };
 
-// Helper function to get current month info
-const getCurrentMonthInfo = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth() + 1; // JavaScript months are 0-indexed
-
-  // Format month to ensure it's 2 digits
-  const formattedMonth = month.toString().padStart(2, "0");
-
-  // Create date objects for first and last day of month
-  const { startDate, endDate } = getMonthDateRange(year, month);
-
-  return {
-    year,
-    month,
-    firstDay: startDate,
-    lastDay: endDate,
-    formattedMonth,
-  };
-};
-
 // Display holidays page
 router.get("/", async (req, res) => {
   try {
@@ -183,8 +162,7 @@ router.get("/", async (req, res) => {
       dbUser: req.user, // Pass database user
       messages: prepareMessages(req.query),
     });
-  } catch (error) {
-    console.error("Error loading holidays:", error);
+  } catch (_error) {
     // Get month and year from query parameters or use current month for error case
     const month = Math.max(1, Math.min(12, parseInt(req.query.month) || new Date().getMonth() + 1));
     const year = Math.max(2020, Math.min(2030, parseInt(req.query.year) || new Date().getFullYear()));
@@ -289,9 +267,6 @@ router.post("/", async (req, res) => {
       Math.round((endObj - startObj) / (1000 * 60 * 60 * 24)) + 1;
 
     if (totalDayCount > daysCount) {
-      const excludedDays = totalDayCount - daysCount;
-      const weekendsAndPublicHolidays = [];
-      
       // Check for weekends and public holidays in the excluded days
       let hasWeekends = false;
       let hasPublicHolidays = false;
@@ -320,8 +295,7 @@ router.post("/", async (req, res) => {
     }
 
     res.redirect(`/holidays?success=${successMessage}`);
-  } catch (error) {
-    console.error("Error adding holiday:", error);
+  } catch (_error) {
     res.redirect("/holidays?error=failed");
   }
 });
@@ -347,8 +321,7 @@ router.post("/:id/delete", async (req, res) => {
     await holidayEntry.delete();
 
     res.redirect("/holidays?success=deleted");
-  } catch (error) {
-    console.error("Error deleting holiday:", error);
+  } catch (_error) {
     res.redirect("/holidays?error=failed");
   }
 });
@@ -400,8 +373,7 @@ router.get("/history", async (req, res) => {
       dbUser: req.user, // Pass database user
       messages: prepareMessages(req.query),
     });
-  } catch (error) {
-    console.error("Error loading holiday history:", error);
+  } catch (_error) {
     res.render("holidays/history", {
       title: "Historia urlopów",
       currentPage: "holidays",
@@ -445,8 +417,7 @@ router.get("/future", async (req, res) => {
       dbUser: req.user, // Pass database user
       messages: prepareMessages(req.query),
     });
-  } catch (error) {
-    console.error("Error loading future holidays:", error);
+  } catch (_error) {
     res.render("holidays/future", {
       title: "Planowane urlopy",
       currentPage: "holidays",
@@ -542,8 +513,7 @@ router.get("/employees/by-date", async (req, res) => {
       formatDayAndMonthGenitive,
       currentView: "by-date",
     });
-  } catch (error) {
-    console.error("Error loading employee holidays (by date):", error);
+  } catch (_error) {
     res.render("holidays/employees", {
       title: "Urlopy pracowników",
       currentPage: "holidays",
@@ -724,8 +694,7 @@ router.get("/employees/by-person", async (req, res) => {
       messages: prepareMessages(req.query),
       currentView: "by-person",
     });
-  } catch (error) {
-    console.error("Error loading employee holidays (by person):", error);
+  } catch (_error) {
     res.render("holidays/employees-by-person", {
       title: "Urlopy pracowników - wg osoby",
       currentPage: "holidays",

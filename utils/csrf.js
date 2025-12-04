@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const logger = require("./logger").createModuleLogger("CSRF");
 
 // Name for the signed CSRF cookie
 const CSRF_COOKIE_NAME = process.env.CSRF_COOKIE_NAME || "csrfToken";
@@ -48,7 +49,7 @@ function sameOrigin(req) {
       try {
         const refererUrl = new URL(referer);
         return refererUrl.host === host;
-      } catch (e) {
+      } catch (_e) {
         return false;
       }
     }
@@ -59,7 +60,7 @@ function sameOrigin(req) {
   try {
     const u = new URL(origin);
     return u.host === host;
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }
@@ -101,12 +102,12 @@ function verifyCsrf(req, res, next) {
 // Centralized error handler for CSRF errors
 function csrfErrorHandler(err, req, res, next) {
   if (err && err.code === "EBADCSRFTOKEN") {
-    console.warn("CSRF validation failed", {
+    logger.warn({
       path: req.originalUrl,
       method: req.method,
       ip: req.ip,
       userId: req.user && req.user.id,
-    });
+    }, "CSRF validation failed");
     const isDevelopment = process.env.NODE_ENV !== "production";
     return res.status(403).render("error", {
       title: "Błąd bezpieczeństwa",

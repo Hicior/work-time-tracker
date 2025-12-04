@@ -6,6 +6,7 @@
  * Prevents deletion of groups with assigned users to maintain data integrity.
  */
 const { dbAsync } = require("../db/database");
+const logger = require("../utils/logger").createModuleLogger("Group");
 
 class Group {
   constructor(data) {
@@ -16,39 +17,24 @@ class Group {
 
   // Get group by ID
   static async findById(id) {
-    try {
-      const group = await dbAsync.get("SELECT * FROM groups WHERE id = $1", [
-        id,
-      ]);
-      return group ? new Group(group) : null;
-    } catch (error) {
-      console.error("Error finding group by ID:", error);
-      throw error;
-    }
+    const group = await dbAsync.get("SELECT * FROM groups WHERE id = $1", [
+      id,
+    ]);
+    return group ? new Group(group) : null;
   }
 
   // Get group by name
   static async findByName(name) {
-    try {
-      const group = await dbAsync.get("SELECT * FROM groups WHERE name = $1", [
-        name,
-      ]);
-      return group ? new Group(group) : null;
-    } catch (error) {
-      console.error("Error finding group by name:", error);
-      throw error;
-    }
+    const group = await dbAsync.get("SELECT * FROM groups WHERE name = $1", [
+      name,
+    ]);
+    return group ? new Group(group) : null;
   }
 
   // Get all groups
   static async findAll() {
-    try {
-      const groups = await dbAsync.all("SELECT * FROM groups ORDER BY name");
-      return groups.map((group) => new Group(group));
-    } catch (error) {
-      console.error("Error finding all groups:", error);
-      throw error;
-    }
+    const groups = await dbAsync.all("SELECT * FROM groups ORDER BY name");
+    return groups.map((group) => new Group(group));
   }
 
   // Create new group
@@ -67,9 +53,11 @@ class Group {
 
       const newId = result.rows[0].id;
       const newGroup = await Group.findById(newId);
+
+      logger.info({ groupId: newId, name: groupData.name }, "Group created");
       return newGroup;
     } catch (error) {
-      console.error("Error creating group:", error);
+      logger.error({ err: error, name: groupData.name }, "Failed to create group");
       throw error;
     }
   }
@@ -77,6 +65,7 @@ class Group {
   // Update group
   async update(updateData) {
     try {
+      const oldName = this.name;
       const result = await dbAsync.run(
         "UPDATE groups SET name = $1 WHERE id = $2",
         [updateData.name || this.name, this.id]
@@ -84,11 +73,14 @@ class Group {
 
       if (result.rowCount > 0) {
         Object.assign(this, updateData);
+        if (updateData.name && updateData.name !== oldName) {
+          logger.info({ groupId: this.id, oldName, newName: updateData.name }, "Group renamed");
+        }
         return true;
       }
       return false;
     } catch (error) {
-      console.error("Error updating group:", error);
+      logger.error({ err: error, groupId: this.id }, "Failed to update group");
       throw error;
     }
   }
@@ -108,28 +100,28 @@ class Group {
       const result = await dbAsync.run("DELETE FROM groups WHERE id = $1", [
         this.id,
       ]);
+      if (result.rowCount > 0) {
+        logger.info({ groupId: this.id, name: this.name }, "Group deleted");
+      }
       return result.rowCount > 0;
     } catch (error) {
-      console.error("Error deleting group:", error);
+      if (error.message !== "Cannot delete group with assigned users") {
+        logger.error({ err: error, groupId: this.id }, "Failed to delete group");
+      }
       throw error;
     }
   }
 
   // Get users in this group
   async getUsers() {
-    try {
-      const users = await dbAsync.all(
-        "SELECT * FROM users WHERE group_id = $1 ORDER BY name",
-        [this.id]
-      );
+    const users = await dbAsync.all(
+      "SELECT * FROM users WHERE group_id = $1 ORDER BY name",
+      [this.id]
+    );
 
-      // We import User here to avoid circular dependencies
-      const User = require("./User");
-      return users.map((user) => new User(user));
-    } catch (error) {
-      console.error("Error getting users in group:", error);
-      throw error;
-    }
+    // We import User here to avoid circular dependencies
+    const User = require("./User");
+    return users.map((user) => new User(user));
   }
 }
 

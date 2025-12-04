@@ -35,6 +35,139 @@ const buildLocationMap = (locations = []) => {
   return map;
 };
 
+/**
+ * Calculate older missing work days (current month + previous month, excluding editable dates)
+ * @param {number} userId - The user ID
+ * @param {Set} editableDatesSet - Set of editable date strings (last 3 working days)
+ * @param {Set} workHoursDateSet - Set of dates that have work hours logged
+ * @param {string|null} userStartDate - User's first work hour record date (null if no records)
+ * @returns {Promise<Array>} Array of missing day objects
+ */
+async function calculateOlderMissingDays(userId, editableDatesSet, workHoursDateSet, userStartDate) {
+  // If user has no records yet, don't show any older missing day warnings
+  if (!userStartDate) {
+    return [];
+  }
+
+  const today = new Date();
+  const currentMonth = today.getMonth() + 1;
+  const currentYear = today.getFullYear();
+  
+  // Calculate previous month
+  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+  
+  const olderMissingDays = [];
+  
+  // Get public holidays for current and previous month
+  const currentMonthHolidays = await PublicHoliday.findByMonthAndYear(currentMonth, currentYear);
+  const prevMonthHolidays = await PublicHoliday.findByMonthAndYear(prevMonth, prevYear);
+  
+  const publicHolidayDates = new Set([
+    ...currentMonthHolidays.map(h => formatDate(h.holiday_date)),
+    ...prevMonthHolidays.map(h => formatDate(h.holiday_date))
+  ]);
+  
+  // Get user holidays for the date range
+  const prevMonthStart = `${prevYear}-${String(prevMonth).padStart(2, '0')}-01`;
+  const todayStr = formatDate(today);
+  const userHolidays = await Holiday.findByUserAndDateRange(userId, prevMonthStart, todayStr);
+  const userHolidayDates = new Set(userHolidays.map(h => formatDate(h.holiday_date)));
+  
+  // Get all work hours for the date range to check against
+  const allWorkHours = await WorkHours.findByUserAndDateRange(userId, prevMonthStart, todayStr);
+  const allWorkHoursSet = new Set(allWorkHours.map(wh => formatDate(wh.work_date)));
+  
+  // Merge with provided workHoursDateSet (for editable dates)
+  workHoursDateSet.forEach(date => allWorkHoursSet.add(date));
+  
+  // Process previous month
+  const daysInPrevMonth = new Date(prevYear, prevMonth, 0).getDate();
+  for (let day = 1; day <= daysInPrevMonth; day++) {
+    const dateStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const date = new Date(prevYear, prevMonth - 1, day);
+    const dayOfWeek = date.getDay();
+    
+    // Skip weekends
+    if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+    
+    // Skip days before user's first record
+    if (dateStr < userStartDate) continue;
+    
+    // Skip if in editable dates
+    if (editableDatesSet.has(dateStr)) continue;
+    
+    // Skip public holidays
+    if (publicHolidayDates.has(dateStr)) continue;
+    
+    // Skip user holidays
+    if (userHolidayDates.has(dateStr)) continue;
+    
+    // Skip if has work hours
+    if (allWorkHoursSet.has(dateStr)) continue;
+    
+    // This is a missing work day
+    olderMissingDays.push({
+      formattedDate: dateStr,
+      label: getDayOfWeekName(dateStr),
+      month: prevMonth,
+      year: prevYear,
+      monthName: new Date(prevYear, prevMonth - 1, 1).toLocaleString('pl-PL', { month: 'long' })
+    });
+  }
+  
+  // Process current month (up to yesterday, excluding today which might be in editable dates)
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  // Only process current month if yesterday is still in the current month
+  // (On the 1st of a month, yesterday is in the previous month, so skip this loop)
+  const yesterdayMonth = yesterday.getMonth() + 1;
+  const yesterdayYear = yesterday.getFullYear();
+  
+  if (yesterdayMonth === currentMonth && yesterdayYear === currentYear) {
+    const daysToCheck = yesterday.getDate();
+    
+    for (let day = 1; day <= daysToCheck; day++) {
+      const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const date = new Date(currentYear, currentMonth - 1, day);
+      const dayOfWeek = date.getDay();
+      
+      // Skip weekends
+      if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+      
+      // Skip days before user's first record
+      if (dateStr < userStartDate) continue;
+      
+      // Skip if in editable dates
+      if (editableDatesSet.has(dateStr)) continue;
+      
+      // Skip public holidays
+      if (publicHolidayDates.has(dateStr)) continue;
+      
+      // Skip user holidays
+      if (userHolidayDates.has(dateStr)) continue;
+      
+      // Skip if has work hours
+      if (allWorkHoursSet.has(dateStr)) continue;
+      
+      // This is a missing work day
+      olderMissingDays.push({
+        formattedDate: dateStr,
+        label: getDayOfWeekName(dateStr),
+        month: currentMonth,
+        year: currentYear,
+        monthName: new Date(currentYear, currentMonth - 1, 1).toLocaleString('pl-PL', { month: 'long' })
+      });
+    }
+  }
+  
+  // Sort by date (oldest first)
+  olderMissingDays.sort((a, b) => a.formattedDate.localeCompare(b.formattedDate));
+  
+  return olderMissingDays;
+}
+
 // Display work hours page
 router.get("/", async (req, res) => {
   try {
@@ -57,15 +190,14 @@ router.get("/", async (req, res) => {
         : [];
     const recentLocationMap = buildLocationMap(recentLocations);
 
-    // Get work hours for valid dates
-    let workHours = [];
-    for (const dateInfo of dates) {
-      const entries = await WorkHours.findByUserAndDate(
-        userId,
-        dateInfo.formattedDate
-      );
-      workHours = [...workHours, ...entries];
-    }
+    // Get work hours for valid dates using a single range query (performance optimization)
+    const workHours = recentLocationRangeStart && recentLocationRangeEnd
+      ? await WorkHours.findByUserAndDateRange(
+          userId,
+          recentLocationRangeStart,
+          recentLocationRangeEnd
+        )
+      : [];
 
     // Sort by date (descending)
     workHours.sort((a, b) => new Date(b.work_date) - new Date(a.work_date));
@@ -91,6 +223,37 @@ router.get("/", async (req, res) => {
     enhancedValidDates.forEach(dateInfo => {
       validDatesMap.set(dateInfo.formattedDate, dateInfo);
     });
+
+    // Get user's first work hour record date (start date for warnings)
+    // New users should not see warnings for days before their first record
+    const firstWorkHour = await WorkHours.findFirstByUser(userId);
+    let userStartDate = firstWorkHour ? formatDate(firstWorkHour.work_date) : null;
+    
+    // Ensure userStartDate is not in the future (data integrity check)
+    // If first record is somehow in the future, treat user as new (no warnings)
+    if (userStartDate && userStartDate > today) {
+      userStartDate = null;
+    }
+
+    // Calculate missing work days (working days without logged hours)
+    const workHoursDateSet = new Set(workHours.map(wh => formatDate(wh.work_date)));
+    
+    // If user has no records yet, don't show any missing day warnings
+    const missingWorkDays = userStartDate ? enhancedValidDates.filter(dateInfo => {
+      // Skip today - only warn about past days (user still has time to fill today)
+      if (dateInfo.formattedDate === today) return false;
+      // Skip days before user's first record
+      if (dateInfo.formattedDate < userStartDate) return false;
+      // Only count working days (not weekend, not public holiday, not user holiday)
+      const isWorkingDay = !dateInfo.isWeekend && !dateInfo.isPublicHoliday && !dateInfo.isUserHoliday;
+      // Check if hours are missing for this date
+      const hasHours = workHoursDateSet.has(dateInfo.formattedDate);
+      return isWorkingDay && !hasHours;
+    }) : [];
+
+    // Calculate older missing work days (current + previous month, excluding editable dates)
+    const editableDatesSet = new Set(enhancedValidDates.map(d => d.formattedDate));
+    const olderMissingWorkDays = await calculateOlderMissingDays(userId, editableDatesSet, workHoursDateSet, userStartDate);
 
     // Add weekday names to each entry and format dates
     workHours.forEach((entry) => {
@@ -266,6 +429,9 @@ router.get("/", async (req, res) => {
       currentPage: "work-hours",
       workHours, // Pass combined and sorted work hours
       validDates: enhancedValidDates, // Pass enhanced valid dates with user holiday info
+      missingWorkDays, // Pass missing work days for reminder UI (editable)
+      olderMissingWorkDays, // Pass older missing work days (requires manager)
+      workHoursDates: Array.from(workHoursDateSet), // Pass dates with logged hours (YYYY-MM-DD format)
       todayDate: today,
       isHolidayToday,
       publicHolidays, // Pass full public holidays list to the view
@@ -289,8 +455,7 @@ router.get("/", async (req, res) => {
       dbUser: req.user, // Pass database user
       messages: prepareMessages(req.query), // Process messages
     });
-  } catch (error) {
-    console.error("Error loading work hours:", error);
+  } catch (_error) {
     const validDates = await getValidDatesForEntry(req.user.id);
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
@@ -302,6 +467,9 @@ router.get("/", async (req, res) => {
       currentPage: "work-hours",
       workHours: [],
       validDates: validDates.dates, // Pass valid workdays even in error case
+      missingWorkDays: [], // Empty in error case
+      olderMissingWorkDays: [], // Empty in error case
+      workHoursDates: [], // Empty in error case
       todayDate: validDates.today,
       isHolidayToday: false,
       publicHolidays: [], // Empty array in error case
@@ -390,7 +558,6 @@ router.post("/", async (req, res) => {
 
     res.redirect(`/work-hours?success=${isUpdate ? "updated" : "added"}`);
   } catch (error) {
-    console.error("Error adding work hours:", error);
     // Check for specific model validation errors
     if (error.message === "Invalid total hours value.") {
       return res.redirect("/work-hours?error=invalid_hours");
@@ -454,7 +621,6 @@ router.post("/:id", async (req, res) => {
 
     res.redirect("/work-hours?success=updated");
   } catch (error) {
-    console.error("Error updating work hours:", error);
     // Check for specific model validation errors
     if (error.message === "Invalid total hours value.") {
       return res.redirect("/work-hours?error=invalid_hours");
@@ -489,8 +655,7 @@ router.post("/:id/delete", async (req, res) => {
     await workHoursEntry.delete();
 
     res.redirect("/work-hours?success=deleted");
-  } catch (error) {
-    console.error("Error deleting work hours:", error);
+  } catch (_error) {
     res.redirect("/work-hours?error=failed");
   }
 });
@@ -704,7 +869,6 @@ router.get("/statistics", async (req, res) => {
 
       // Then count weekday holidays
       let weekdayHolidaysCount = 0;
-      let weekdayPublicHolidaysCount = 0;
 
       workData.forEach((day) => {
         // Use formatDate to ensure date format is consistent
@@ -715,10 +879,6 @@ router.get("/statistics", async (req, res) => {
         if (isWeekday) {
           if (day.isHoliday) {
             weekdayHolidaysCount += 1;
-          }
-          // Only count public holidays if not already counted as regular holiday
-          else if (day.isPublicHoliday) {
-            weekdayPublicHolidaysCount += 1;
           }
         }
       });
@@ -792,8 +952,7 @@ router.get("/statistics", async (req, res) => {
         totalCombinedHours: 0,
       });
     }
-  } catch (error) {
-    console.error("Error loading statistics:", error);
+  } catch (_error) {
     res.redirect("/admin?error=failed");
   }
 });
@@ -937,8 +1096,7 @@ router.post("/statistics/update", async (req, res) => {
         },
       });
     }
-  } catch (error) {
-    console.error("Error updating work hours from statistics:", error);
+  } catch (_error) {
     return res.status(500).json({ error: "Failed to update work hours" });
   }
 });

@@ -19,6 +19,111 @@
     </div>
   </div>
 
+  <% if (missingWorkDays && missingWorkDays.length > 0) { %>
+  <!-- Missing Hours Alert Banner (Editable Days) -->
+  <div class="mb-4 missing-hours-banner relative overflow-hidden rounded-xl bg-red-50 border-l-4 border-red-500 shadow-sm">
+    
+    <!-- Content -->
+    <div class="relative px-6 py-5">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-4">
+          <!-- Static warning icon -->
+          <div class="flex-shrink-0">
+            <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          
+          <div>
+            <h3 class="text-lg font-bold text-red-800 flex items-center gap-2">
+              Uzupełnij wpisy czasu pracy!
+              <span class="inline-flex items-center justify-center px-2.5 py-0.5 text-sm font-bold bg-red-100 text-red-700 rounded-full">
+                <%= missingWorkDays.length %> <%= missingWorkDays.length === 1 ? 'dzień' : 'dni' %>
+              </span>
+            </h3>
+            <p class="text-red-700 text-sm mt-1">
+              Możesz teraz uzupełnić brakujące godziny za te dni.
+            </p>
+          </div>
+        </div>
+        
+        <!-- Missing dates pills -->
+        <div class="flex flex-wrap gap-2">
+          <% missingWorkDays.forEach(day => { %>
+          <span class="inline-flex items-center px-3 py-1.5 bg-white text-red-700 text-sm font-medium rounded-lg border border-red-200 hover:bg-red-50 transition-colors">
+            <svg class="w-4 h-4 mr-1.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <%= day.label %> (<%= day.formattedDate %>)
+          </span>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% } %>
+
+  <% if (olderMissingWorkDays && olderMissingWorkDays.length > 0) { %>
+  <!-- Older Missing Hours Banner (Requires Manager) -->
+  <div class="mb-6 older-missing-hours-banner relative overflow-hidden rounded-xl bg-amber-50 border-l-4 border-amber-500 shadow-sm">
+    
+    <!-- Content -->
+    <div class="relative px-6 py-4">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-4">
+          <!-- Info icon -->
+          <div class="flex-shrink-0">
+            <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          
+          <div>
+            <h3 class="text-base font-bold text-amber-800 flex items-center gap-2">
+              Starsze brakujące wpisy
+              <span class="inline-flex items-center justify-center px-2.5 py-0.5 text-sm font-bold bg-amber-100 text-amber-700 rounded-full">
+                <%= olderMissingWorkDays.length %> <%= olderMissingWorkDays.length === 1 ? 'dzień' : 'dni' %>
+              </span>
+            </h3>
+            <p class="text-amber-700 text-sm mt-0.5">
+              Skontaktuj się ze swoim menedżerem, aby uzupełnić te wpisy.
+            </p>
+          </div>
+        </div>
+        
+        <!-- Collapsible dates toggle -->
+        <button 
+          type="button" 
+          id="toggleOlderDatesBtn"
+          class="inline-flex items-center px-4 py-2 bg-white text-amber-700 text-sm font-medium rounded-lg border border-amber-200 hover:bg-amber-50 transition-colors shadow-sm">
+          <svg id="olderDatesChevron" class="w-4 h-4 mr-2 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+          Pokaż daty
+        </button>
+      </div>
+      
+      <!-- Collapsible dates list -->
+      <div id="olderDatesList" class="hidden mt-4 pt-4 border-t border-amber-200">
+        <div class="flex flex-wrap gap-2">
+          <% olderMissingWorkDays.forEach(day => { %>
+          <span class="inline-flex items-center px-3 py-1.5 bg-white text-amber-700 text-sm font-medium rounded-lg border border-amber-200">
+            <svg class="w-4 h-4 mr-1.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <%= day.label %> (<%= day.formattedDate %>)
+          </span>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% } %>
+  
+  <% if ((!missingWorkDays || missingWorkDays.length === 0) && (!olderMissingWorkDays || olderMissingWorkDays.length === 0)) { %>
+  <!-- No missing entries - keep original spacing -->
+  <% } %>
+
   <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
     <!-- Left column: Add new entry & Calendar -->
     <div class="xl:col-span-2 space-y-8">
@@ -38,15 +143,28 @@
             <!-- Date Selection -->
             <div>
               <label for="work_date" class="block text-sm font-medium text-gray-700 mb-2">Wybierz dzień</label>
+              <% 
+                // Create a Set of missing dates for quick lookup
+                const missingDatesSet = new Set((missingWorkDays || []).map(d => d.formattedDate));
+                // Create a Set of dates that actually have work hours logged
+                // Uses workHoursDates passed from route (already in YYYY-MM-DD format)
+                const datesWithHoursSet = new Set(workHoursDates || []);
+              %>
               <div class="relative">
                 <select
                   id="work_date"
                   name="work_date"
                   class="appearance-none block w-full pl-4 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium shadow-sm bg-gray-50 hover:bg-white transition-colors cursor-pointer"
                   required>
-                  <% validDates.forEach(dateInfo => { %>
-                  <option value="<%= dateInfo.formattedDate %>" class="py-2">
-                    <%= dateInfo.label %> (<%= dateInfo.formattedDate %>)<% if (dateInfo.isWeekend) { %> - Weekend<% } %><% if (dateInfo.isPublicHoliday) { %> - Święto<% } %>
+                  <% validDates.forEach(dateInfo => { 
+                    const isMissing = missingDatesSet.has(dateInfo.formattedDate);
+                    const hasHours = datesWithHoursSet.has(dateInfo.formattedDate);
+                    const isToday = dateInfo.formattedDate === todayDate;
+                    const isWorkingDay = !dateInfo.isWeekend && !dateInfo.isPublicHoliday && !dateInfo.isUserHoliday;
+                    const isTodayWithoutHours = isToday && isWorkingDay && !hasHours;
+                  %>
+                  <option value="<%= dateInfo.formattedDate %>" class="py-2" data-missing="<%= isMissing %>">
+                    <% if (isMissing) { %>⚠️ <% } else if (hasHours) { %>✅ <% } %><%= dateInfo.label %> (<%= dateInfo.formattedDate %>)<% if (dateInfo.isWeekend) { %> - Weekend<% } %><% if (dateInfo.isPublicHoliday) { %> - Święto<% } %><% if (isMissing) { %> - BRAK WPISU<% } %><% if (isTodayWithoutHours) { %> - BRAK WPISU<% } %>
                   </option>
                   <% }); %>
                 </select>
@@ -56,6 +174,14 @@
                   </svg>
                 </div>
               </div>
+              <% if (missingWorkDays && missingWorkDays.length > 0) { %>
+              <p class="mt-2 text-xs text-red-600 font-medium flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Dni oznaczone ⚠️ wymagają uzupełnienia
+              </p>
+              <% } %>
             </div>
 
             <!-- Location Toggle -->
@@ -399,6 +525,36 @@
     location: d.location !== undefined ? d.location : null
   }))) %>;
   /* eslint-enable */
+
+  // Toggle older dates list visibility
+  function toggleOlderDates() {
+    const list = document.getElementById('olderDatesList');
+    const chevron = document.getElementById('olderDatesChevron');
+    const button = chevron.parentElement;
+    
+    if (list.classList.contains('hidden')) {
+      list.classList.remove('hidden');
+      chevron.classList.add('rotate-180');
+      button.querySelector('svg + span, span')?.remove();
+      const textNode = button.childNodes[button.childNodes.length - 1];
+      if (textNode.nodeType === 3) {
+        textNode.textContent = ' Ukryj daty';
+      }
+    } else {
+      list.classList.add('hidden');
+      chevron.classList.remove('rotate-180');
+      const textNode = button.childNodes[button.childNodes.length - 1];
+      if (textNode.nodeType === 3) {
+        textNode.textContent = ' Pokaż daty';
+      }
+    }
+  }
+
+  // Attach event listener for older dates toggle button (CSP-compliant)
+  const toggleOlderDatesBtn = document.getElementById('toggleOlderDatesBtn');
+  if (toggleOlderDatesBtn) {
+    toggleOlderDatesBtn.addEventListener('click', toggleOlderDates);
+  }
 
   // Functions for hours input
   function updateHoursValue(value) {
@@ -826,6 +982,7 @@
     // Navigate
     window.location.href = `/work-hours?month=${displayMonth}&year=${displayYear}`;
   }
+
 </script>
 
 <style>
@@ -847,5 +1004,25 @@
   input[type="number"] {
     -moz-appearance: textfield;
     appearance: textfield;
+  }
+  
+  /* ============================================
+   * Dropdown Styling for Missing Days
+   * ============================================ */
+  
+  /* Style options with missing data */
+  select option[data-missing="true"] {
+    background-color: #fef2f2;
+    color: #991b1b;
+    font-weight: 600;
+  }
+  
+  /* ============================================
+   * Older Missing Days Banner (Amber theme)
+   * ============================================ */
+  
+  /* Chevron rotation for collapsible */
+  .rotate-180 {
+    transform: rotate(180deg);
   }
 </style>

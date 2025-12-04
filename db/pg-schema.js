@@ -4,6 +4,7 @@
  * and sets up database indexes for improved query performance.
  */
 const { pool } = require("./database");
+const logger = require("../utils/logger").createModuleLogger("Schema");
 
 async function createSchema() {
   try {
@@ -115,10 +116,10 @@ async function createSchema() {
     );
 
     await pool.query("COMMIT");
-    console.log("PostgreSQL database schema created successfully");
+    logger.info("PostgreSQL database schema created successfully");
   } catch (error) {
     await pool.query("ROLLBACK");
-    console.error("Error creating PostgreSQL schema:", error);
+    logger.error({ err: error }, "Error creating PostgreSQL schema");
     throw error;
   }
 }
@@ -134,7 +135,7 @@ async function schemaExists() {
     `);
     return result.rows[0].exists;
   } catch (error) {
-    console.error("Error checking schema existence:", error);
+    logger.error({ err: error }, "Error checking schema existence");
     return false;
   }
 }
@@ -143,11 +144,11 @@ async function schemaExists() {
 if (require.main === module) {
   createSchema()
     .then(() => {
-      console.log("Schema creation completed");
+      logger.info("Schema creation completed");
       process.exit(0);
     })
     .catch((err) => {
-      console.error("Schema creation failed:", err);
+      logger.error({ err }, "Schema creation failed");
       process.exit(1);
     });
 }

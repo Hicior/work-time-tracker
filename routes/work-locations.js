@@ -78,8 +78,7 @@ router.post("/", async (req, res) => {
         is_onsite: location.is_onsite,
       },
     });
-  } catch (error) {
-    console.error("Error updating work location:", error);
+  } catch (_error) {
     res.status(500).json({ error: "Failed to update work location" });
   }
 });
@@ -110,8 +109,7 @@ router.delete("/", async (req, res) => {
     );
 
     res.json({ success: true, removed });
-  } catch (error) {
-    console.error("Error clearing work location:", error);
+  } catch (_error) {
     res.status(500).json({ error: "Failed to clear work location" });
   }
 });

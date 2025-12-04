@@ -41,7 +41,6 @@ router.get("/", async (req, res) => {
       messages: prepareMessages(req.query),
     });
   } catch (error) {
-    console.error("Error loading public holidays admin page:", error);
     const isDevelopment = process.env.NODE_ENV !== 'production';
     res.status(500).render("error", {
       title: "Błąd",
@@ -73,8 +72,7 @@ router.post("/", async (req, res) => {
     });
 
     res.redirect("/admin/public-holidays?success=added");
-  } catch (error) {
-    console.error("Error adding public holiday:", error);
+  } catch (_error) {
     res.redirect("/admin/public-holidays?error=failed");
   }
 });
@@ -96,8 +94,7 @@ router.post("/:id/delete", async (req, res) => {
     await publicHoliday.delete();
 
     res.redirect("/admin/public-holidays?success=deleted");
-  } catch (error) {
-    console.error("Error deleting public holiday:", error);
+  } catch (_error) {
     res.redirect("/admin/public-holidays?error=failed");
   }
 });

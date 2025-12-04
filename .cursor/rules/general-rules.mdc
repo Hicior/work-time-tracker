@@ -5,6 +5,7 @@ alwaysApply: true
 ## Rules
 
 - Use dateUtils.js functions for all date formatting and manipulation; always use formatDate for database operations, formatDateTimeForDisplay for user-facing timestamps, and getMonthDateRange for month date range calculations.
+- Use logger.js for logging; always use logger.info for info messages, logger.error for error messages, logger.warn for warning messages, logger.debug for debug messages, logger.trace for trace messages.
 
 ## Technologies
 
@@ -13,6 +14,7 @@ alwaysApply: true
 - Express
 - PostgreSQL
 - Tailwind CSS
+- Pino for logging
 
 ## APP look
 
@@ -22,8 +24,6 @@ alwaysApply: true
 
 ## Linting
 
-- ESLint is configured for `.js` files and `<script>` tags in `.ejs` files
-- Run `npm run lint` to check all files, `npm run lint:fix` to auto-fix issues
-- Files with EJS template syntax inside JavaScript code (like `<% users.forEach %>` in arrays) cannot be parsed by ESLint and must be added to the `ignores` array in `eslint.config.js`
-- Currently ignored EJS files: `views/admin/groups.ejs`, `views/admin/statistics.ejs`, `views/work-hours/index.ejs`
-- If you get "Parsing error: Unexpected token <" in an EJS file, add it to the ignores list
+- ESLint is configured for `.js` files only
+- EJS files are excluded from linting (EJS template syntax cannot be reliably parsed by ESLint)
+- Run `npm run lint` to check all JS files, `npm run lint:fix` to auto-fix issues

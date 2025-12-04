@@ -6,6 +6,7 @@
 const { Pool } = require("pg");
 require("dotenv").config();
 const pgTypes = require("pg-types");
+const logger = require("../utils/logger").createModuleLogger("Database");
 
 // Create database connection pool
 // Enable SSL with relaxed validation for production databases (managed services often use self-signed certs)
@@ -50,11 +51,11 @@ const pool = new Pool({
 
 // Log connection success or errors
 pool.on("connect", () => {
-  console.log("Connected to PostgreSQL database");
+  logger.info("Connected to PostgreSQL database");
 });
 
 pool.on("error", (err) => {
-  console.error("PostgreSQL connection error:", err);
+  logger.error({ err }, "PostgreSQL connection error");
 });
 
 // Promise wrapper for database operations
@@ -160,15 +161,13 @@ function formatDatesInResult(result) {
           try {
             // For PostgreSQL timestamps with timezone info
             date = new Date(newRow[field]);
-          } catch (e) {
-            console.error(`Error parsing date for field ${field}:`, e);
+          } catch (_e) {
             continue;
           }
         }
 
         // Skip invalid dates
         if (isNaN(date.getTime())) {
-          console.error(`Invalid date in field ${field}:`, newRow[field]);
           continue;
         }
 

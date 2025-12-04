@@ -31,8 +31,7 @@ router.post("/sync-users", async (req, res) => {
       message: `Synchronized ${result.successCount} users from Auth0 (${result.failCount} failed)`,
       result: result,
     });
-  } catch (error) {
-    console.error("Error syncing users from Auth0:", error);
+  } catch (_error) {
     return res.status(500).json({ error: "Failed to sync users" });
   }
 });
@@ -81,8 +80,7 @@ router.post("/users/:id/toggle-block", async (req, res) => {
         blocked: updatedUser.is_blocked,
       },
     });
-  } catch (error) {
-    console.error("Error toggling user block status:", error);
+  } catch (_error) {
     return res.status(500).json({ error: "Failed to update user status" });
   }
 });
@@ -132,8 +130,7 @@ router.post("/users/:id/update-name", async (req, res) => {
         name: userToUpdate.name,
       },
     });
-  } catch (error) {
-    console.error("Error updating user name:", error);
+  } catch (_error) {
     return res.status(500).json({
       success: false,
       message: "Wystąpił błąd podczas aktualizacji",

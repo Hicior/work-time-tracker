@@ -4,6 +4,7 @@
  */
 
 const { dbAsync } = require("../db/database");
+const logger = require("../utils/logger").createModuleLogger("PublicHoliday");
 
 class PublicHoliday {
   constructor(data) {
@@ -25,6 +26,7 @@ class PublicHoliday {
 
       const newId = result.rows[0].id;
 
+      logger.info({ name, holidayDate: holiday_date }, "Public holiday created");
       return new PublicHoliday({
         id: newId,
         name,
@@ -32,85 +34,60 @@ class PublicHoliday {
         created_at: new Date().toISOString(),
       });
     } catch (error) {
-      console.error("Error creating public holiday:", error);
+      logger.error({ err: error, name: holidayData.name, holidayDate: holidayData.holiday_date }, "Failed to create public holiday");
       throw error;
     }
   }
 
   // Find all public holidays
   static async findAll() {
-    try {
-      const rows = await dbAsync.all(
-        "SELECT * FROM public_holidays ORDER BY holiday_date ASC"
-      );
-      return rows.map((row) => new PublicHoliday(row));
-    } catch (error) {
-      console.error("Error finding all public holidays:", error);
-      throw error;
-    }
+    const rows = await dbAsync.all(
+      "SELECT * FROM public_holidays ORDER BY holiday_date ASC"
+    );
+    return rows.map((row) => new PublicHoliday(row));
   }
 
   // Find public holidays by year
   static async findByYear(year) {
-    try {
-      const startDate = `${year}-01-01`;
-      const endDate = `${year}-12-31`;
+    const startDate = `${year}-01-01`;
+    const endDate = `${year}-12-31`;
 
-      const rows = await dbAsync.all(
-        "SELECT * FROM public_holidays WHERE holiday_date BETWEEN $1 AND $2 ORDER BY holiday_date ASC",
-        [startDate, endDate]
-      );
-      return rows.map((row) => new PublicHoliday(row));
-    } catch (error) {
-      console.error("Error finding public holidays by year:", error);
-      throw error;
-    }
+    const rows = await dbAsync.all(
+      "SELECT * FROM public_holidays WHERE holiday_date BETWEEN $1 AND $2 ORDER BY holiday_date ASC",
+      [startDate, endDate]
+    );
+    return rows.map((row) => new PublicHoliday(row));
   }
 
   // Find public holidays by month and year
   static async findByMonthAndYear(month, year) {
-    try {
-      const startDate = `${year}-${month.toString().padStart(2, "0")}-01`;
-      const lastDay = new Date(year, month, 0).getDate();
-      const endDate = `${year}-${month.toString().padStart(2, "0")}-${lastDay}`;
+    const startDate = `${year}-${month.toString().padStart(2, "0")}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${month.toString().padStart(2, "0")}-${lastDay}`;
 
-      const rows = await dbAsync.all(
-        "SELECT * FROM public_holidays WHERE holiday_date BETWEEN $1 AND $2 ORDER BY holiday_date ASC",
-        [startDate, endDate]
-      );
-      return rows.map((row) => new PublicHoliday(row));
-    } catch (error) {
-      console.error("Error finding public holidays by month and year:", error);
-      throw error;
-    }
+    const rows = await dbAsync.all(
+      "SELECT * FROM public_holidays WHERE holiday_date BETWEEN $1 AND $2 ORDER BY holiday_date ASC",
+      [startDate, endDate]
+    );
+    return rows.map((row) => new PublicHoliday(row));
   }
 
   // Find public holidays by date range
   static async findByDateRange(startDate, endDate) {
-    try {
-      const rows = await dbAsync.all(
-        "SELECT * FROM public_holidays WHERE holiday_date BETWEEN $1 AND $2 ORDER BY holiday_date ASC",
-        [startDate, endDate]
-      );
-      return rows.map((row) => new PublicHoliday(row));
-    } catch (error) {
-      console.error("Error finding public holidays by date range:", error);
-      throw error;
-    }
+    const rows = await dbAsync.all(
+      "SELECT * FROM public_holidays WHERE holiday_date BETWEEN $1 AND $2 ORDER BY holiday_date ASC",
+      [startDate, endDate]
+    );
+    return rows.map((row) => new PublicHoliday(row));
   }
 
   // Find public holiday by ID
   static async findById(id) {
-    try {
-      const row = await dbAsync.get(
-        "SELECT * FROM public_holidays WHERE id = $1",
-        [id]
-      );
-      return row ? new PublicHoliday(row) : null;
-    } catch (error) {
-      console.error("Error finding public holiday by id:", error);
-      throw error;
-    }
+    const row = await dbAsync.get(
+      "SELECT * FROM public_holidays WHERE id = $1",
+      [id]
+    );
+    return row ? new PublicHoliday(row) : null;
   }
 
   // Delete a public holiday
@@ -120,9 +97,12 @@ class PublicHoliday {
         "DELETE FROM public_holidays WHERE id = $1",
         [this.id]
       );
+      if (result.rowCount > 0) {
+        logger.info({ name: this.name, holidayDate: this.holiday_date }, "Public holiday deleted");
+      }
       return result.rowCount > 0;
     } catch (error) {
-      console.error("Error deleting public holiday:", error);
+      logger.error({ err: error, name: this.name, holidayDate: this.holiday_date }, "Failed to delete public holiday");
       throw error;
     }
   }

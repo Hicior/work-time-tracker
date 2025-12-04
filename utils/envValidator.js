@@ -3,6 +3,7 @@
  * Validates that all required environment variables are present on startup
  * Helps catch configuration issues before the application starts serving requests
  */
+const logger = require("./logger").createModuleLogger("EnvValidator");
 
 /**
  * Validates that all required environment variables are present
@@ -51,10 +52,10 @@ Check the env.example.txt file for reference.
   const nodeEnv = process.env.NODE_ENV || 'development';
   
   if (!validNodeEnvs.includes(nodeEnv)) {
-    console.warn(`⚠️  Warning: NODE_ENV="${nodeEnv}" is not a standard value. Expected: ${validNodeEnvs.join(', ')}`);
+    logger.warn({ nodeEnv, validNodeEnvs }, 'NODE_ENV is not a standard value');
   }
 
-  console.log(`✅ Environment validation passed (NODE_ENV: ${nodeEnv})`);
+  logger.info({ nodeEnv }, 'Environment validation passed');
 }
 
 module.exports = { validateEnvironmentVariables };

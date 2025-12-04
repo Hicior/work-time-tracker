@@ -4,6 +4,7 @@
  * calculating weekdays in a month and formatting day names.
  * Supports calculations for work days and holiday statistics.
  */
+
 function getWeekdaysInMonth(year, month) {
   // Ensure month is 1-based for Date constructor's month index (0-based)
   const monthIndex = month - 1;
@@ -72,8 +73,8 @@ function formatDate(dateValue) {
       const day = String(date.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
     }
-  } catch (e) {
-    console.error("Error parsing date:", e, dateValue);
+  } catch (_e) {
+    // Silently handle parsing errors - return null for invalid dates
   }
 
   // If all else fails, return the original value
@@ -95,8 +96,8 @@ function formatDateForDisplay(dateValue) {
     if (date instanceof Date && !isNaN(date)) {
       return date.toISOString().split("T")[0];
     }
-  } catch (e) {
-    console.error("Error formatting date:", e);
+  } catch (_e) {
+    // Silently handle formatting errors - return original value
   }
 
   // If parsing fails, use our standard formatDate function
@@ -134,7 +135,6 @@ function formatDateTimeForDisplay(dateValue, locale = "pl-PL") {
 
     // Check if date is valid
     if (isNaN(date.getTime())) {
-      console.error("Invalid date value:", dateValue);
       return String(dateValue);
     }
 
@@ -150,8 +150,7 @@ function formatDateTimeForDisplay(dateValue, locale = "pl-PL") {
     };
 
     return date.toLocaleString(locale, options);
-  } catch (e) {
-    console.error("Error formatting date and time:", e, dateValue);
+  } catch (_e) {
     return String(dateValue);
   }
 }
@@ -167,10 +166,6 @@ function formatDayAndMonthGenitive(dateValue) {
   try {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) {
-      console.error(
-        "Invalid date value for formatDayAndMonthGenitive:",
-        dateValue
-      );
       return String(dateValue);
     }
 
@@ -193,8 +188,7 @@ function formatDayAndMonthGenitive(dateValue) {
     ];
 
     return `${day} ${monthNamesGenitive[monthIndex]}`;
-  } catch (e) {
-    console.error("Error formatting day and month genitive:", e, dateValue);
+  } catch (_e) {
     return String(dateValue);
   }
 }
@@ -207,21 +201,16 @@ function formatDayAndMonthGenitive(dateValue) {
  * @returns {object} Object with startDate and endDate strings in YYYY-MM-DD format
  */
 function getMonthDateRange(year, month) {
-  try {
-    const formattedMonth = month.toString().padStart(2, "0");
-    const startDate = `${year}-${formattedMonth}-01`;
+  const formattedMonth = month.toString().padStart(2, "0");
+  const startDate = `${year}-${formattedMonth}-01`;
 
-    // Calculate the actual last day of the month
-    const lastDay = new Date(year, month, 0).getDate();
-    const endDate = `${year}-${formattedMonth}-${lastDay
-      .toString()
-      .padStart(2, "0")}`;
+  // Calculate the actual last day of the month
+  const lastDay = new Date(year, month, 0).getDate();
+  const endDate = `${year}-${formattedMonth}-${lastDay
+    .toString()
+    .padStart(2, "0")}`;
 
-    return { startDate, endDate };
-  } catch (error) {
-    console.error("Error calculating month date range:", error);
-    throw error;
-  }
+  return { startDate, endDate };
 }
 
 module.exports = {

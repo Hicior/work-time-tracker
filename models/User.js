@@ -5,6 +5,7 @@
  * Handles user authentication state and permissions through role-based access control.
  */
 const { dbAsync } = require("../db/database");
+const logger = require("../utils/logger").createModuleLogger("User");
 
 class User {
   constructor(data) {
@@ -21,40 +22,25 @@ class User {
 
   // Find user by internal ID
   static async findById(id) {
-    try {
-      const user = await dbAsync.get("SELECT * FROM users WHERE id = $1", [id]);
-      return user ? new User(user) : null;
-    } catch (error) {
-      console.error("Error finding user by ID:", error);
-      throw error;
-    }
+    const user = await dbAsync.get("SELECT * FROM users WHERE id = $1", [id]);
+    return user ? new User(user) : null;
   }
 
   // Find user by Auth0 ID
   static async findByAuth0Id(auth0Id) {
-    try {
-      const user = await dbAsync.get(
-        "SELECT * FROM users WHERE auth0_id = $1",
-        [auth0Id]
-      );
-      return user ? new User(user) : null;
-    } catch (error) {
-      console.error("Error finding user by Auth0 ID:", error);
-      throw error;
-    }
+    const user = await dbAsync.get(
+      "SELECT * FROM users WHERE auth0_id = $1",
+      [auth0Id]
+    );
+    return user ? new User(user) : null;
   }
 
   // Find user by email
   static async findByEmail(email) {
-    try {
-      const user = await dbAsync.get("SELECT * FROM users WHERE email = $1", [
-        email,
-      ]);
-      return user ? new User(user) : null;
-    } catch (error) {
-      console.error("Error finding user by email:", error);
-      throw error;
-    }
+    const user = await dbAsync.get("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
+    return user ? new User(user) : null;
   }
 
   // Create new user from Auth0 profile
@@ -99,9 +85,10 @@ class User {
       );
 
       const newUserId = result.rows[0].id;
+      logger.info({ userId: newUserId, email: auth0User.email }, "New user registered");
       return await User.findById(newUserId);
     } catch (error) {
-      console.error("Error creating user from Auth0 profile:", error);
+      logger.error({ err: error, email: auth0User?.email }, "Failed to create user from Auth0");
       throw error;
     }
   }
@@ -145,7 +132,7 @@ class User {
       }
       return false;
     } catch (error) {
-      console.error("Error updating user:", error);
+      logger.error({ err: error, userId: this.id }, "Failed to update user");
       throw error;
     }
   }
@@ -168,13 +155,8 @@ class User {
 
   // Get all users (admin function)
   static async getAll() {
-    try {
-      const users = await dbAsync.all("SELECT * FROM users ORDER BY email");
-      return users.map((user) => new User(user));
-    } catch (error) {
-      console.error("Error getting all users:", error);
-      throw error;
-    }
+    const users = await dbAsync.all("SELECT * FROM users ORDER BY email");
+    return users.map((user) => new User(user));
   }
 
   // Set user role (admin function)
@@ -189,9 +171,12 @@ class User {
         [role, userId]
       );
 
+      if (result.rowCount > 0) {
+        logger.info({ userId, newRole: role }, "User role changed");
+      }
       return result.rowCount > 0;
     } catch (error) {
-      console.error("Error setting user role:", error);
+      logger.error({ err: error, userId, role }, "Failed to set user role");
       throw error;
     }
   }
@@ -204,75 +189,69 @@ class User {
         [isBlocked, userId]
       );
 
+      if (result.rowCount > 0) {
+        logger.info({ userId, blocked: isBlocked }, isBlocked ? "User blocked" : "User unblocked");
+      }
       return result.rowCount > 0;
     } catch (error) {
-      console.error("Error updating user block status:", error);
+      logger.error({ err: error, userId, isBlocked }, "Failed to update user block status");
       throw error;
     }
   }
 
   // Sync user from Auth0 data
   static async syncFromAuth0Data(auth0User) {
-    try {
-      if (!auth0User || !auth0User.user_id) {
-        throw new Error("Invalid Auth0 user data");
-      }
+    if (!auth0User || !auth0User.user_id) {
+      throw new Error("Invalid Auth0 user data");
+    }
 
-      // Check if user exists by Auth0 ID
-      const existingUser = await User.findByAuth0Id(auth0User.user_id);
+    // Check if user exists by Auth0 ID
+    const existingUser = await User.findByAuth0Id(auth0User.user_id);
 
-      if (existingUser) {
-        // Update existing user with Auth0 data
-        const isBlocked = auth0User.blocked === true;
+    if (existingUser) {
+      // Update existing user with Auth0 data
+      const isBlocked = auth0User.blocked === true;
 
-        await dbAsync.run(
-          "UPDATE users SET email = $1, is_blocked = $2, last_login = $3 WHERE id = $4",
-          [
-            auth0User.email,
-            isBlocked,
-            auth0User.last_login || new Date(),
-            existingUser.id,
-          ]
-        );
-        return true;
-      } else {
-        // Create new user from Auth0 data if it doesn't exist
-        const role = "user";
-        const isBlocked = auth0User.blocked === true;
+      await dbAsync.run(
+        "UPDATE users SET email = $1, is_blocked = $2, last_login = $3 WHERE id = $4",
+        [
+          auth0User.email,
+          isBlocked,
+          auth0User.last_login || new Date(),
+          existingUser.id,
+        ]
+      );
+      return true;
+    } else {
+      // Create new user from Auth0 data if it doesn't exist
+      const role = "user";
+      const isBlocked = auth0User.blocked === true;
 
-        await dbAsync.run(
-          "INSERT INTO users (auth0_id, email, role, is_blocked) VALUES ($1, $2, $3, $4)",
-          [auth0User.user_id, auth0User.email, role, isBlocked]
-        );
-        return true;
-      }
-    } catch (error) {
-      console.error("Error syncing user from Auth0 data:", error);
-      throw error;
+      await dbAsync.run(
+        "INSERT INTO users (auth0_id, email, role, is_blocked) VALUES ($1, $2, $3, $4)",
+        [auth0User.user_id, auth0User.email, role, isBlocked]
+      );
+      logger.info({ email: auth0User.email }, "User synced from Auth0");
+      return true;
     }
   }
 
   // Bulk sync all users from Auth0
   static async syncAllFromAuth0(auth0Users) {
-    try {
-      let successCount = 0;
-      let failCount = 0;
+    let successCount = 0;
+    let failCount = 0;
 
-      for (const auth0User of auth0Users) {
-        try {
-          await User.syncFromAuth0Data(auth0User);
-          successCount++;
-        } catch (error) {
-          console.error(`Error syncing user ${auth0User.email}:`, error);
-          failCount++;
-        }
+    for (const auth0User of auth0Users) {
+      try {
+        await User.syncFromAuth0Data(auth0User);
+        successCount++;
+      } catch {
+        failCount++;
       }
-
-      return { successCount, failCount };
-    } catch (error) {
-      console.error("Error in bulk sync from Auth0:", error);
-      throw error;
     }
+
+    logger.info({ successCount, failCount, total: auth0Users.length }, "Auth0 user sync completed");
+    return { successCount, failCount };
   }
 }
 

@@ -182,11 +182,6 @@ router.get("/", async (req, res) => {
       daysInMonth.push(currentDate);
     }
 
-    // Map public holidays for easy checking
-    const publicHolidayDates = publicHolidays.map((ph) =>
-      formatDate(ph.holiday_date)
-    );
-
     const publicHolidayMap = {};
     publicHolidays.forEach((ph) => {
       const date = formatDate(ph.holiday_date);
@@ -219,7 +214,6 @@ router.get("/", async (req, res) => {
       requiredMonthlyHours: requiredMonthlyHours,
     });
   } catch (error) {
-    console.error("Error loading dashboard:", error);
     const isDevelopment = process.env.NODE_ENV !== 'production';
     res.status(500).render("error", {
       title: "Błąd",

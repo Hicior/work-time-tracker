@@ -10,6 +10,8 @@ const ejsMate = require("ejs-mate");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const { auth } = require("express-openid-connect");
+const pinoHttp = require("pino-http");
+const logger = require("./utils/logger");
 const { authLimiter, apiLimiter, healthCheckLimiter } = require("./utils/rateLimiter");
 require("dotenv").config();
 
@@ -42,6 +44,29 @@ app.use('/login', authLimiter);
 app.use('/callback', authLimiter);
 app.use('/admin-api', apiLimiter);
 
+// HTTP request logging middleware
+app.use(pinoHttp({
+  logger,
+  // Skip logging for static assets to reduce noise
+  autoLogging: {
+    ignore: (req) => req.url.startsWith('/css/') || req.url.startsWith('/js/') || req.url.startsWith('/images/'),
+  },
+  // Custom log level based on response status
+  customLogLevel: (req, res, err) => {
+    if (res.statusCode >= 500 || err) return 'error';
+    if (res.statusCode >= 400) return 'warn';
+    return 'info';
+  },
+  // Custom success message
+  customSuccessMessage: (req, _res) => {
+    return `${req.method} ${req.url} completed`;
+  },
+  // Custom error message
+  customErrorMessage: (req, res, err) => {
+    return `${req.method} ${req.url} failed: ${err.message}`;
+  },
+}));
+
 // Health check endpoint - accessible without authentication for monitoring/load balancers
 // Must be placed before Auth0 middleware to bypass authentication
 const { pool } = require('./db/database');
@@ -53,7 +78,7 @@ app.get('/health', healthCheckLimiter, async (req, res) => {
       status: 'ok',
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
+  } catch (_error) {
     // Database connection failed - return 503 Service Unavailable
     res.status(503).json({
       status: 'error',
@@ -153,7 +178,7 @@ const requireAuth = async (req, res, next) => {
 
     // Check if user is blocked
     if (user.is_blocked) {
-      console.warn(`Blocked user attempted access: ${user.email} (${user.auth0_id})`);
+      logger.warn({ email: user.email }, 'Blocked user attempted access');
       // Redirect to logout with blocked=true query param to show message after logout
       // This ensures proper cleanup of both local and Auth0 sessions
       return res.redirect("/logout?returnTo=/&blocked=true");
@@ -163,7 +188,7 @@ const requireAuth = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.error("Error processing authenticated user:", error);
+    logger.error({ err: error, path: req.originalUrl }, 'Failed to process user authentication');
     const isDevelopment = process.env.NODE_ENV !== 'production';
     return res.status(500).render("error", {
       title: "Error",
@@ -300,19 +325,11 @@ app.get("/", async (req, res) => {
       const nextMonth2 = nextMonth === 12 ? 1 : nextMonth + 1;
       const nextYear2 = nextMonth === 12 ? nextYear + 1 : nextYear;
 
-      const { startDate: prevStart, endDate: prevEnd } = getMonthDateRange(
+      const { startDate: prevStart } = getMonthDateRange(
         prevYear,
         prevMonth
       );
-      const { startDate: currStart, endDate: currEnd } = getMonthDateRange(
-        currentYear,
-        currentMonth
-      );
-      const { startDate: nextStart, endDate: nextEnd } = getMonthDateRange(
-        nextYear,
-        nextMonth
-      );
-      const { startDate: next2Start, endDate: next2End } = getMonthDateRange(
+      const { endDate: next2End } = getMonthDateRange(
         nextYear2,
         nextMonth2
       );
@@ -423,8 +440,7 @@ app.get("/", async (req, res) => {
 
       // Use centralized service to determine if today's location section should be shown
       showTodayLocationSection = await shouldShowTodayLocationSection(dbUser.id);
-    } catch (error) {
-      console.error("Error getting user data for homepage:", error);
+    } catch (_error) {
       // Provide fallback monthStats to prevent template crashes
       monthStats = {
         totalWorkHours: 0,
@@ -489,7 +505,7 @@ app.get("/admin", requireAuth, requireManager, async (req, res) => {
       messages: prepareMessages(req.query),
     });
   } catch (error) {
-    console.error("Error loading admin dashboard:", error);
+    logger.error({ err: error }, 'Failed to load admin panel');
     const isDevelopment = process.env.NODE_ENV !== 'production';
     res.status(500).render("error", {
       title: "Błąd",
@@ -529,7 +545,7 @@ app.post(
 
       res.redirect(`/admin?success=${successMessage}`);
     } catch (error) {
-      console.error("Error updating user role:", error);
+      logger.error({ err: error, userId: req.params.id, role }, 'Failed to update user role');
       const isDevelopment = process.env.NODE_ENV !== 'production';
       res.status(500).render("error", {
         title: "Błąd",
@@ -560,15 +576,14 @@ app.use("/admin-api", requireAuth, requireManager, adminApiRoutes);
 app.use(csrfErrorHandler);
 
 // Global error handler middleware - catches all unhandled errors
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   // Log error for monitoring
-  console.error('Unhandled error:', {
-    message: err.message,
-    stack: err.stack,
+  logger.error({
+    err,
     path: req.path,
     method: req.method,
     ip: req.ip,
-  });
+  }, 'Unhandled error');
 
   // Determine if we should expose error details (only in development)
   const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -618,50 +633,50 @@ const initializeDb = async () => {
     const exists = await schemaExists();
     
     if (exists) {
-      console.log("PostgreSQL database schema already exists, skipping initialization");
+      logger.info('PostgreSQL database schema already exists, skipping initialization');
       return;
     }
     
     // Only create schema if it doesn't exist
-    console.log("PostgreSQL database schema not found, creating...");
+    logger.info('PostgreSQL database schema not found, creating...');
     await createSchema();
-    console.log("PostgreSQL database schema initialized successfully");
+    logger.info('PostgreSQL database schema initialized successfully');
   } catch (error) {
-    console.error("Error initializing PostgreSQL database:", error);
+    logger.error({ err: error }, 'Error initializing PostgreSQL database');
     throw error; // Fail startup if schema can't be created/verified
   }
 };
 
 // Start server
 const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info({ port: PORT }, 'Server running');
   initializeDb();
 });
 
 // Graceful shutdown handling
 const gracefulShutdown = async (signal) => {
-  console.log(`\n${signal} signal received: closing HTTP server`);
+  logger.info({ signal }, 'Signal received: closing HTTP server');
   
   // Stop accepting new connections
   server.close(async () => {
-    console.log('HTTP server closed');
+    logger.info('HTTP server closed');
     
     // Close database connection pool
     try {
       const { pool } = require('./db/database');
       await pool.end();
-      console.log('Database connection pool closed');
+      logger.info('Database connection pool closed');
     } catch (error) {
-      console.error('Error closing database pool:', error);
+      logger.error({ err: error }, 'Error closing database pool');
     }
     
-    console.log('Graceful shutdown completed');
+    logger.info('Graceful shutdown completed');
     process.exit(0);
   });
   
   // Force shutdown after 10 seconds if graceful shutdown fails
   setTimeout(() => {
-    console.error('Could not close connections in time, forcefully shutting down');
+    logger.error('Could not close connections in time, forcefully shutting down');
     process.exit(1);
   }, 10000);
 };
@@ -672,12 +687,12 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
+  logger.fatal({ err: error }, 'Uncaught Exception');
   gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+process.on('unhandledRejection', (reason, _promise) => {
+  logger.fatal({ reason }, 'Unhandled Rejection');
   gracefulShutdown('UNHANDLED_REJECTION');
 });

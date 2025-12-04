@@ -7,6 +7,7 @@
  */
 const { dbAsync } = require("../db/database");
 const { formatDate } = require("../utils/dateUtils");
+const logger = require("../utils/logger").createModuleLogger("Holiday");
 
 class Holiday {
   constructor(data) {
@@ -18,30 +19,20 @@ class Holiday {
 
   // Get holiday by ID
   static async findById(id) {
-    try {
-      const holiday = await dbAsync.get(
-        "SELECT * FROM holidays WHERE id = $1",
-        [id]
-      );
-      return holiday ? new Holiday(holiday) : null;
-    } catch (error) {
-      console.error("Error finding holiday by ID:", error);
-      throw error;
-    }
+    const holiday = await dbAsync.get(
+      "SELECT * FROM holidays WHERE id = $1",
+      [id]
+    );
+    return holiday ? new Holiday(holiday) : null;
   }
 
   // Get holidays by user ID and date range
   static async findByUserAndDateRange(userId, startDate, endDate) {
-    try {
-      const holidays = await dbAsync.all(
-        "SELECT * FROM holidays WHERE user_id = $1 AND holiday_date BETWEEN $2 AND $3 ORDER BY holiday_date",
-        [userId, startDate, endDate]
-      );
-      return holidays.map((entry) => new Holiday(entry));
-    } catch (error) {
-      console.error("Error finding holidays by user and date range:", error);
-      throw error;
-    }
+    const holidays = await dbAsync.all(
+      "SELECT * FROM holidays WHERE user_id = $1 AND holiday_date BETWEEN $2 AND $3 ORDER BY holiday_date",
+      [userId, startDate, endDate]
+    );
+    return holidays.map((entry) => new Holiday(entry));
   }
 
   // Get holidays for all users in a date range, including user information
@@ -58,11 +49,7 @@ class Holiday {
       );
 
       return holidaysWithUserInfo || [];
-    } catch (error) {
-      console.error(
-        "Error finding holidays for all users by date range:",
-        error
-      );
+    } catch {
       // Return empty array instead of throwing to prevent page crash
       return [];
     }
@@ -70,111 +57,81 @@ class Holiday {
 
   // Get all holidays for a user
   static async findAllByUser(userId) {
-    try {
-      const holidays = await dbAsync.all(
-        "SELECT * FROM holidays WHERE user_id = $1 ORDER BY holiday_date DESC",
-        [userId]
-      );
-      return holidays.map((entry) => new Holiday(entry));
-    } catch (error) {
-      console.error("Error finding all holidays for user:", error);
-      throw error;
-    }
+    const holidays = await dbAsync.all(
+      "SELECT * FROM holidays WHERE user_id = $1 ORDER BY holiday_date DESC",
+      [userId]
+    );
+    return holidays.map((entry) => new Holiday(entry));
   }
 
   // Get future holidays for a user
   static async findFutureHolidays(userId, fromDate) {
-    try {
-      const holidays = await dbAsync.all(
-        "SELECT * FROM holidays WHERE user_id = $1 AND holiday_date >= $2 ORDER BY holiday_date",
-        [userId, fromDate]
-      );
-      return holidays.map((entry) => new Holiday(entry));
-    } catch (error) {
-      console.error("Error finding future holidays for user:", error);
-      throw error;
-    }
+    const holidays = await dbAsync.all(
+      "SELECT * FROM holidays WHERE user_id = $1 AND holiday_date >= $2 ORDER BY holiday_date",
+      [userId, fromDate]
+    );
+    return holidays.map((entry) => new Holiday(entry));
   }
 
   // Get past holidays for a user
   static async findPastHolidays(userId, beforeDate) {
-    try {
-      const holidays = await dbAsync.all(
-        "SELECT * FROM holidays WHERE user_id = $1 AND holiday_date < $2 ORDER BY holiday_date DESC",
-        [userId, beforeDate]
-      );
-      return holidays.map((entry) => new Holiday(entry));
-    } catch (error) {
-      console.error("Error finding past holidays for user:", error);
-      throw error;
-    }
+    const holidays = await dbAsync.all(
+      "SELECT * FROM holidays WHERE user_id = $1 AND holiday_date < $2 ORDER BY holiday_date DESC",
+      [userId, beforeDate]
+    );
+    return holidays.map((entry) => new Holiday(entry));
   }
 
   // Get holidays by user ID and specific date
   static async findByUserAndDate(userId, date) {
-    try {
-      const holiday = await dbAsync.get(
-        "SELECT * FROM holidays WHERE user_id = $1 AND holiday_date = $2",
-        [userId, date]
-      );
-      return holiday ? new Holiday(holiday) : null;
-    } catch (error) {
-      console.error("Error finding holiday by user and date:", error);
-      throw error;
-    }
+    const holiday = await dbAsync.get(
+      "SELECT * FROM holidays WHERE user_id = $1 AND holiday_date = $2",
+      [userId, date]
+    );
+    return holiday ? new Holiday(holiday) : null;
   }
 
   // Check if a date is a holiday for a user
   static async isHoliday(userId, date) {
-    try {
-      // Check for user-specific holiday
-      const holiday = await Holiday.findByUserAndDate(userId, date);
+    // Check for user-specific holiday
+    const holiday = await Holiday.findByUserAndDate(userId, date);
 
-      // Check for public holiday
-      const publicHolidayDate = new Date(date);
-      const month = publicHolidayDate.getMonth() + 1;
-      const year = publicHolidayDate.getFullYear();
+    // Check for public holiday
+    const publicHolidayDate = new Date(date);
+    const month = publicHolidayDate.getMonth() + 1;
+    const year = publicHolidayDate.getFullYear();
 
-      // Get the PublicHoliday model
-      const PublicHoliday = require("./PublicHoliday");
+    // Get the PublicHoliday model
+    const PublicHoliday = require("./PublicHoliday");
 
-      // Get all public holidays for the month/year
-      const publicHolidays = await PublicHoliday.findByMonthAndYear(
-        month,
-        year
-      );
+    // Get all public holidays for the month/year
+    const publicHolidays = await PublicHoliday.findByMonthAndYear(
+      month,
+      year
+    );
 
-      // Check if the specified date is a public holiday
-      const isPublicHoliday = publicHolidays.some(
-        (ph) => formatDate(ph.holiday_date) === date
-      );
+    // Check if the specified date is a public holiday
+    const isPublicHoliday = publicHolidays.some(
+      (ph) => formatDate(ph.holiday_date) === date
+    );
 
-      // Return true if either a user holiday or public holiday
-      return !!holiday || isPublicHoliday;
-    } catch (error) {
-      console.error("Error checking if date is a holiday:", error);
-      throw error;
-    }
+    // Return true if either a user holiday or public holiday
+    return !!holiday || isPublicHoliday;
   }
 
   // Get total holidays by user ID for a month
   static async getTotalMonthlyHolidays(userId, year, month) {
-    try {
-      const { getMonthDateRange } = require("../utils/dateUtils");
-      const { startDate, endDate } = getMonthDateRange(year, month);
+    const { getMonthDateRange } = require("../utils/dateUtils");
+    const { startDate, endDate } = getMonthDateRange(year, month);
 
-      const holidays = await Holiday.findByUserAndDateRange(
-        userId,
-        startDate,
-        endDate
-      );
+    const holidays = await Holiday.findByUserAndDateRange(
+      userId,
+      startDate,
+      endDate
+    );
 
-      // Return the count of holidays
-      return holidays.length;
-    } catch (error) {
-      console.error("Error calculating total monthly holidays:", error);
-      throw error;
-    }
+    // Return the count of holidays
+    return holidays.length;
   }
 
   // Create new holiday entry
@@ -196,9 +153,11 @@ class Holiday {
 
       const newId = result.rows[0].id;
       const newHoliday = await Holiday.findById(newId);
+
+      logger.info({ userId: holidayData.user_id, holidayDate: holidayData.holiday_date }, "Holiday created");
       return newHoliday;
     } catch (error) {
-      console.error("Error creating holiday entry:", error);
+      logger.error({ err: error, userId: holidayData.user_id, holidayDate: holidayData.holiday_date }, "Failed to create holiday");
       throw error;
     }
   }
@@ -209,9 +168,12 @@ class Holiday {
       const result = await dbAsync.run("DELETE FROM holidays WHERE id = $1", [
         this.id,
       ]);
+      if (result.rowCount > 0) {
+        logger.info({ userId: this.user_id, holidayDate: this.holiday_date }, "Holiday deleted");
+      }
       return result.rowCount > 0;
     } catch (error) {
-      console.error("Error deleting holiday entry:", error);
+      logger.error({ err: error, userId: this.user_id, holidayDate: this.holiday_date }, "Failed to delete holiday");
       throw error;
     }
   }
@@ -223,9 +185,12 @@ class Holiday {
         "DELETE FROM holidays WHERE user_id = $1 AND holiday_date = $2",
         [userId, date]
       );
+      if (result.rowCount > 0) {
+        logger.info({ userId, holidayDate: date }, "Holiday deleted");
+      }
       return result.rowCount > 0;
     } catch (error) {
-      console.error("Error deleting holiday by user and date:", error);
+      logger.error({ err: error, userId, holidayDate: date }, "Failed to delete holiday");
       throw error;
     }
   }

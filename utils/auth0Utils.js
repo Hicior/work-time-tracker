@@ -4,6 +4,7 @@
  * including fetching users and managing their blocked status.
  */
 const axios = require("axios");
+const logger = require("./logger").createModuleLogger("Auth0Utils");
 
 // Auth0 Configuration
 const auth0Config = {
@@ -36,12 +37,12 @@ async function getManagementApiToken() {
     !auth0Config.clientSecret ||
     !auth0Config.audience
   ) {
-    console.error("Auth0 Management API configuration is incomplete:", {
-      domain: !!auth0Config.domain,
-      clientId: !!auth0Config.clientId,
-      clientSecret: !!auth0Config.clientSecret,
-      audience: !!auth0Config.audience,
-    });
+    logger.error({
+      hasDomain: !!auth0Config.domain,
+      hasClientId: !!auth0Config.clientId,
+      hasClientSecret: !!auth0Config.clientSecret,
+      hasAudience: !!auth0Config.audience,
+    }, "Auth0 Management API configuration is incomplete");
     throw new Error("Auth0 Management API configuration is incomplete");
   }
 
@@ -62,10 +63,11 @@ async function getManagementApiToken() {
 
     return managementApiToken;
   } catch (error) {
-    console.error("Error obtaining Auth0 Management API token:", error.message);
-    if (error.response) {
-      console.error("Response data:", error.response.data);
-    }
+    logger.error({ 
+      err: error, 
+      responseStatus: error.response?.status,
+      responseStatusText: error.response?.statusText 
+    }, "Error obtaining Auth0 Management API token");
     throw new Error("Could not obtain Auth0 Management API token");
   }
 }
@@ -108,19 +110,17 @@ async function getAuth0Users() {
 
       // Safety check to prevent infinite loops (Auth0 has a 1000 user limit anyway)
       if (page > 10) {
-        console.warn(
-          "Auth0 user sync: Reached maximum page limit (1000 users). Stopping pagination."
-        );
         break;
       }
     }
 
     return allUsers;
   } catch (error) {
-    console.error("Error fetching Auth0 users:", error.message);
-    if (error.response) {
-      console.error("Response data:", error.response.data);
-    }
+    logger.error({ 
+      err: error, 
+      responseStatus: error.response?.status,
+      responseStatusText: error.response?.statusText 
+    }, "Error fetching Auth0 users");
     throw new Error("Could not fetch Auth0 users");
   }
 }
@@ -153,18 +153,12 @@ async function toggleUserBlockedStatus(userId, blocked) {
 
     return response.data;
   } catch (error) {
-    console.error(
-      `Error ${blocked ? "blocking" : "unblocking"} Auth0 user:`,
-      error.message
-    );
-    if (error.response) {
-      console.error("Auth0 API Error:", {
-        status: error.response.status,
-        data: error.response.data,
-        userId: userId,
-        blocked: Boolean(blocked),
-      });
-    }
+    logger.error({
+      err: error,
+      blocked,
+      responseStatus: error.response?.status,
+      responseStatusText: error.response?.statusText,
+    }, `Error ${blocked ? "blocking" : "unblocking"} Auth0 user`);
     throw new Error(`Could not ${blocked ? "block" : "unblock"} Auth0 user`);
   }
 }
